@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ParametricForm, type ToolParameters } from "@/components/ParametricForm";
+import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
