@@ -33,7 +33,7 @@ export function DimensionInput({
         type="number"
         step={step}
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         className="border-blue-200 dark:border-blue-800/50"
         readOnly={readOnly}
       />
