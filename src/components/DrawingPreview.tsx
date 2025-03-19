@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +8,12 @@ import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { generateDrawing, generatePDF, exportAsPNG } from "@/services/autocadService";
 
-interface DrawingPreviewProps {
+export interface DrawingPreviewProps {
   parameters: ToolParameters;
+  templateId: string;
 }
 
-export function DrawingPreview({ parameters }: DrawingPreviewProps) {
+export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) {
   const frontViewCanvasRef = useRef<HTMLCanvasElement>(null);
   const sideViewCanvasRef = useRef<HTMLCanvasElement>(null);
   const topViewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -452,13 +454,11 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       return;
     }
     
-    const selectedTemplate = localStorage.getItem("selectedTemplate") || "template-endmill";
-    
     setIsGenerating(true);
     setExportLoading(true);
     
     try {
-      const drawingUrl = await generateDrawing(parameters, selectedTemplate);
+      const drawingUrl = await generateDrawing(parameters, templateId);
       
       if (drawingUrl) {
         setAutocadDrawingUrl(drawingUrl);
