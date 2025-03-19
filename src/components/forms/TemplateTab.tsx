@@ -1,44 +1,57 @@
 
 import { CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { ApiKeyForm } from "@/components/autocad/ApiKeyForm";
+import { TemplateSelector } from "@/components/autocad/TemplateSelector";
 
 export function TemplateTab() {
-  const [showInfo, setShowInfo] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("settings");
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+  };
 
   return (
     <CardContent className="p-6">
-      <div className="space-y-4">
-        <div className="relative">
-          <div className="flex items-center justify-between mb-2">
-            <Label htmlFor="template" className="block text-blue-800 dark:text-blue-400">
-              Template
-            </Label>
-            <Popover open={showInfo} onOpenChange={setShowInfo}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full">
-                  <Info className="h-4 w-4 text-blue-600" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Custom Templates</h4>
-                  <p className="text-sm text-muted-foreground">
-                    In a future update, you'll be able to upload your own custom drawing templates
-                    and save tool configurations for quick reuse.
-                  </p>
-                </div>
-              </PopoverContent>
-            </Popover>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full mb-4">
+          <TabsTrigger value="settings">API Settings</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="settings" className="space-y-4">
+          <ApiKeyForm />
+          
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">About AutoCAD Integration</h3>
+            <p className="text-sm text-muted-foreground">
+              The Autodesk APS (formerly Forge) integration allows you to generate professional-grade 
+              CAD drawings based on your tool parameters. Enter your API credentials to get started.
+            </p>
           </div>
-          <div className="border-2 border-dashed border-blue-200 dark:border-blue-800/30 rounded-lg p-8 text-center bg-blue-50/50 dark:bg-blue-900/10">
-            <p className="text-muted-foreground">Custom template uploads will be available in a future update.</p>
+        </TabsContent>
+        
+        <TabsContent value="templates" className="space-y-4">
+          <TemplateSelector 
+            onTemplateSelect={handleTemplateSelect}
+            selectedTemplate={selectedTemplate}
+          />
+          
+          <Separator className="my-4" />
+          
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">How Templates Work</h3>
+            <p className="text-sm text-muted-foreground">
+              Templates define the basic layout and appearance of your technical drawings.
+              Select a template that matches your tool type for best results.
+              The parameters you specify will be applied to the template to generate your drawing.
+            </p>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </CardContent>
   );
 }

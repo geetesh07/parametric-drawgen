@@ -5,6 +5,7 @@ import { Download, ZoomIn, ZoomOut, RotateCw, Square, Maximize2, Ruler, Scan, Fi
 import { type ToolParameters } from "./parametric-form/ParametricForm";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { generateDrawing, generatePDF, exportAsPNG } from "@/services/autocadService";
 
 interface DrawingPreviewProps {
   parameters: ToolParameters;
@@ -19,8 +20,9 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
   const [activeTab, setActiveTab] = useState("front-view");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [exportLoading, setExportLoading] = useState(false);
+  const [autocadDrawingUrl, setAutocadDrawingUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Render all views whenever parameters change
   useEffect(() => {
     renderFrontView();
     renderSideView();
@@ -35,102 +37,73 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Set canvas background with grid
     drawGridBackground(ctx, canvas.width, canvas.height);
 
-    // Calculate scale to fit drawing in canvas
     const margin = 50;
     const maxWidth = canvas.width - margin * 2;
     const scale = (maxWidth / parameters.overallLength) * zoomLevel;
     
-    // Center the drawing
     const centerY = canvas.height / 2;
     const startX = (canvas.width - parameters.overallLength * scale) / 2;
 
-    // Drawing settings
     ctx.lineWidth = 2;
     ctx.strokeStyle = "#3b82f6";
     ctx.fillStyle = "#dbeafe";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.textAlign = "center";
     
-    // Draw the tool outline
     ctx.beginPath();
     
-    // Shank
     const shankStartX = startX;
     const shankEndX = startX + parameters.shankLength * scale;
     const shankRadius = parameters.shankDiameter * scale / 2;
     
-    // Flute
     const fluteEndX = shankEndX + parameters.fluteLength * scale;
     const fluteRadius = parameters.cuttingDiameter * scale / 2;
     
-    // Draw shank
     ctx.moveTo(shankStartX, centerY - shankRadius);
     ctx.lineTo(shankEndX, centerY - shankRadius);
     
-    // Draw flute with point
     if (parameters.toolType === "drill" || parameters.toolType === "endmill") {
-      // Draw flute top
       ctx.lineTo(fluteEndX - fluteRadius, centerY - fluteRadius);
-      
-      // Draw point
       ctx.lineTo(fluteEndX, centerY);
       ctx.lineTo(fluteEndX - fluteRadius, centerY + fluteRadius);
     } else {
-      // Reamer has a straighter profile
       ctx.lineTo(fluteEndX, centerY - fluteRadius);
       ctx.lineTo(fluteEndX, centerY + fluteRadius);
     }
     
-    // Draw bottom of tool
     ctx.lineTo(shankEndX, centerY + shankRadius);
     ctx.lineTo(shankStartX, centerY + shankRadius);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
     
-    // Add dimensions
-    ctx.fillStyle = "#000000";
-    
-    // Overall length
     drawDimensionLine(ctx, shankStartX, centerY + 40, fluteEndX, centerY + 40, `${parameters.overallLength.toFixed(2)} mm`);
-    
-    // Shank length
     drawDimensionLine(ctx, shankStartX, centerY + 70, shankEndX, centerY + 70, `${parameters.shankLength.toFixed(2)} mm`);
-    
-    // Flute length
     drawDimensionLine(ctx, shankEndX, centerY + 100, fluteEndX, centerY + 100, `${parameters.fluteLength.toFixed(2)} mm`);
     
-    // Draw diameter indicators (with better spacing to prevent overlapping)
     drawDiameterDimension(ctx, shankStartX + parameters.shankLength * scale * 0.2, centerY, shankRadius, `Ø${parameters.shankDiameter.toFixed(3)}`);
     drawDiameterDimension(ctx, fluteEndX - parameters.fluteLength * scale * 0.3, centerY, fluteRadius, `Ø${parameters.cuttingDiameter.toFixed(3)}`);
     
-    // Draw tool type and coating
     ctx.fillStyle = "#1e40af";
     ctx.font = "14px 'Inter', sans-serif";
     ctx.fillText(`${parameters.toolType.toUpperCase()} - ${parameters.coating}`, canvas.width / 2, 30);
     
-    // Draw back taper label (improved positioning to prevent overlap)
     if (parameters.backTaper > 0) {
       ctx.fillStyle = "#6b7280";
       ctx.font = "12px 'Inter', sans-serif";
       
-      // Position the taper label in a clearer location
       const taperLabelX = shankEndX + parameters.fluteLength * scale * 0.5;
       const taperLabelY = centerY - Math.max(fluteRadius, shankRadius) * 3;
       
-      // Draw a line pointing to where the taper applies
       ctx.beginPath();
       ctx.moveTo(taperLabelX, taperLabelY);
       ctx.lineTo(taperLabelX, centerY - fluteRadius);
       ctx.stroke();
       
-      // Add the label in a clearer position
       ctx.fillText(`BACK TAPER: ${parameters.backTaper.toFixed(3)} mm`, taperLabelX, taperLabelY - 10);
     }
   };
@@ -142,44 +115,35 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Set canvas background with grid
     drawGridBackground(ctx, canvas.width, canvas.height);
     
-    // Calculate scale to fit drawing in canvas
     const margin = 50;
     const maxWidth = canvas.width - margin * 2;
     const scale = (maxWidth / parameters.overallLength) * zoomLevel;
     
-    // Center the drawing
     const centerY = canvas.height / 2;
     const centerX = canvas.width / 2;
     
-    // Draw circular cross-sections
     ctx.strokeStyle = "#3b82f6";
     ctx.fillStyle = "#dbeafe";
     
-    // Shank circle
     ctx.beginPath();
     ctx.arc(centerX - 100, centerY, parameters.shankDiameter * scale / 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     
-    // Flute circle
     ctx.beginPath();
     ctx.arc(centerX + 100, centerY, parameters.cuttingDiameter * scale / 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     
-    // Labels
     ctx.fillStyle = "#1e40af";
     ctx.font = "14px 'Inter', sans-serif";
     ctx.fillText("Shank Cross-Section", centerX - 100, centerY - parameters.shankDiameter * scale - 10);
     ctx.fillText("Flute Cross-Section", centerX + 100, centerY - parameters.cuttingDiameter * scale - 10);
     
-    // Diameter dimensions
     ctx.fillStyle = "#000000";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(`Ø${parameters.shankDiameter.toFixed(3)} mm`, centerX - 100, centerY + parameters.shankDiameter * scale + 30);
@@ -193,18 +157,14 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Set canvas background with grid
     drawGridBackground(ctx, canvas.width, canvas.height);
     
-    // Draw from top perspective (simplified representation)
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const toolRadius = Math.max(parameters.shankDiameter, parameters.cuttingDiameter) * 5;
     
-    // Draw tool from top
     ctx.fillStyle = "#dbeafe";
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 2;
@@ -214,11 +174,9 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.fill();
     ctx.stroke();
     
-    // Draw cutting edges for different tool types
     ctx.strokeStyle = "#1e40af";
     
     if (parameters.toolType === "endmill") {
-      // Draw endmill teeth
       const numTeeth = 4;
       for (let i = 0; i < numTeeth; i++) {
         const angle = (i / numTeeth) * Math.PI * 2;
@@ -231,13 +189,11 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
         ctx.stroke();
       }
     } else if (parameters.toolType === "drill") {
-      // Draw drill point
       ctx.beginPath();
       ctx.moveTo(centerX - toolRadius/2, centerY);
       ctx.lineTo(centerX + toolRadius/2, centerY);
       ctx.stroke();
     } else if (parameters.toolType === "reamer") {
-      // Draw reamer flutes
       const numFlutes = 6;
       for (let i = 0; i < numFlutes; i++) {
         const angle = (i / numFlutes) * Math.PI * 2;
@@ -251,7 +207,6 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       }
     }
     
-    // Label
     ctx.fillStyle = "#1e40af";
     ctx.font = "14px 'Inter', sans-serif";
     ctx.fillText(`${parameters.toolType} - Top View`, centerX, 30);
@@ -264,37 +219,29 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Set canvas background with grid
     drawGridBackground(ctx, canvas.width, canvas.height);
     
-    // 3D-like isometric representation
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     
-    // Calculate scale based on tool dimensions
     const margin = 100;
     const maxDim = Math.max(parameters.overallLength, parameters.cuttingDiameter * 2);
     const scale = (Math.min(canvas.width, canvas.height) - margin) / maxDim * zoomLevel * 0.5;
     
-    // Isometric angles
     const cosa = Math.cos(Math.PI/6);
     const sina = Math.sin(Math.PI/6);
     
-    // Calculate tool dimensions
     const shankLength = parameters.shankLength * scale;
     const fluteLength = parameters.fluteLength * scale;
     const shankRadius = parameters.shankDiameter * scale / 2;
     const fluteRadius = parameters.cuttingDiameter * scale / 2;
     
-    // Draw 3D representation
     ctx.strokeStyle = "#3b82f6";
     ctx.fillStyle = "#dbeafe";
     ctx.lineWidth = 2;
     
-    // Function to convert 3D to isometric 2D
     const iso = (x: number, y: number, z: number) => {
       return {
         x: centerX + (x - z) * cosa,
@@ -302,73 +249,58 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       };
     };
     
-    // Draw shank
     const shankStart = iso(0, 0, 0);
     const shankEnd = iso(shankLength, 0, 0);
     
-    // Main cylinder body (simplified)
-    // Top line
     ctx.beginPath();
     ctx.moveTo(shankStart.x, shankStart.y - shankRadius);
     ctx.lineTo(shankEnd.x, shankEnd.y - shankRadius);
     ctx.stroke();
     
-    // Bottom line
     ctx.beginPath();
     ctx.moveTo(shankStart.x, shankStart.y + shankRadius);
     ctx.lineTo(shankEnd.x, shankEnd.y + shankRadius);
     ctx.stroke();
     
-    // Draw flute
     const fluteEnd = iso(shankLength + fluteLength, 0, 0);
     
-    // Top line with taper
     ctx.beginPath();
     ctx.moveTo(shankEnd.x, shankEnd.y - shankRadius);
     
     if (parameters.toolType === "drill") {
-      // Drill has a point
       ctx.lineTo(fluteEnd.x, fluteEnd.y);
     } else {
-      // Endmill and reamer
       ctx.lineTo(fluteEnd.x, fluteEnd.y - fluteRadius);
     }
     ctx.stroke();
     
-    // Bottom line with taper
     ctx.beginPath();
     ctx.moveTo(shankEnd.x, shankEnd.y + shankRadius);
     
     if (parameters.toolType === "drill") {
-      // Drill has a point
       ctx.lineTo(fluteEnd.x, fluteEnd.y);
     } else {
-      // Endmill and reamer
       ctx.lineTo(fluteEnd.x, fluteEnd.y + fluteRadius);
     }
     ctx.stroke();
     
-    // Draw end circles/ellipses
     drawIsometricCircle(ctx, shankStart.x, shankStart.y, shankRadius);
     
     if (parameters.toolType !== "drill") {
       drawIsometricCircle(ctx, fluteEnd.x, fluteEnd.y, fluteRadius);
     }
     
-    // Label
     ctx.fillStyle = "#1e40af";
     ctx.font = "14px 'Inter', sans-serif";
     ctx.fillText(`${parameters.toolType} - Isometric View`, centerX, 30);
   };
 
-  // Helper function for drawing isometric circle
   const drawIsometricCircle = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
     ctx.beginPath();
     ctx.ellipse(x, y, radius, radius * 0.5, 0, 0, Math.PI * 2);
     ctx.stroke();
   };
 
-  // Helper function for drawing dimension lines (improved to be clearer)
   const drawDimensionLine = (
     ctx: CanvasRenderingContext2D, 
     fromX: number, 
@@ -381,17 +313,14 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.fillStyle = "#1e3a8a";
     ctx.lineWidth = 1;
     
-    // Draw the dimension line with improved contrast
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, fromY);
     ctx.stroke();
     
-    // Draw arrows
     drawArrow(ctx, fromX, fromY, fromX + 10, fromY);
     drawArrow(ctx, toX, fromY, toX - 10, fromY);
     
-    // Draw extension lines
     ctx.beginPath();
     ctx.moveTo(fromX, fromY - 5);
     ctx.lineTo(fromX, fromY + 5);
@@ -399,11 +328,9 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.lineTo(toX, fromY + 5);
     ctx.stroke();
     
-    // Draw dimension text with background for better readability
     const textWidth = ctx.measureText(text).width;
     const padding = 4;
     
-    // Draw text background
     ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
     ctx.fillRect(
       (fromX + toX) / 2 - textWidth / 2 - padding, 
@@ -412,13 +339,11 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       20
     );
     
-    // Draw text
     ctx.fillStyle = "#1e3a8a";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, (fromX + toX) / 2, fromY + 18);
   };
-  
-  // Helper function for drawing diameter dimensions (improved)
+
   const drawDiameterDimension = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -430,21 +355,17 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.fillStyle = "#1e3a8a";
     ctx.lineWidth = 1;
     
-    // Draw dimension line
     ctx.beginPath();
     ctx.moveTo(x, y - radius - 10);
     ctx.lineTo(x, y + radius + 10);
     ctx.stroke();
     
-    // Draw arrows
     drawArrow(ctx, x, y - radius, x, y - radius + 10);
     drawArrow(ctx, x, y + radius, x, y + radius - 10);
     
-    // Draw dimension text with background for clarity
     const textWidth = ctx.measureText(text).width;
     const padding = 4;
     
-    // Draw text background
     ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
     ctx.fillRect(
       x - textWidth / 2 - padding, 
@@ -453,14 +374,12 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       20
     );
     
-    // Draw text
     ctx.fillStyle = "#1e3a8a";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, x, y - radius - 15);
   };
 
-  // Helper function for drawing arrows
-  function drawArrow(ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) {
+  const drawArrow = (ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) => {
     const headLength = 10;
     const dx = toX - fromX;
     const dy = toY - fromY;
@@ -472,20 +391,17 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(fromX - headLength * Math.cos(angle + Math.PI / 6), fromY - headLength * Math.sin(angle + Math.PI / 6));
     ctx.stroke();
-  }
+  };
 
-  // Helper function to draw grid background
   const drawGridBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     ctx.fillStyle = "#f8fafc";
     ctx.fillRect(0, 0, width, height);
     
-    // Draw grid
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1;
     
     const gridSize = 20;
     
-    // Vertical grid lines
     for (let x = 0; x <= width; x += gridSize) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -493,7 +409,6 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
       ctx.stroke();
     }
     
-    // Horizontal grid lines
     for (let y = 0; y <= height; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -502,7 +417,6 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     }
   };
 
-  // Function to export drawing as PNG
   const handleDownload = () => {
     let canvasToDownload;
     
@@ -531,78 +445,92 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     link.click();
   };
 
-  // Function to simulate DXF export (in a real app, this would use a CAD library API)
-  const handleExportDXF = () => {
+  const handleExportWithAutocad = async () => {
+    const apiKeysExist = localStorage.getItem("autocadApiKeys");
+    if (!apiKeysExist) {
+      toast.error("Please configure your AutoCAD API keys first");
+      return;
+    }
+    
+    const selectedTemplate = localStorage.getItem("selectedTemplate") || "template-endmill";
+    
+    setIsGenerating(true);
     setExportLoading(true);
     
-    // Simulate API call to CAD service
-    setTimeout(() => {
-      // In a real implementation, this would construct proper DXF data
-      // or call an external API to generate DXF files
-      const dummyDXF = `0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n30\n0\n11\n${parameters.overallLength}\n21\n0\n31\n0\n0\nENDSEC\n0\nEOF`;
+    try {
+      const drawingUrl = await generateDrawing(parameters, selectedTemplate);
       
-      // Create a blob with the DXF data
-      const blob = new Blob([dummyDXF], { type: 'application/dxf' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create download link and click it
-      const link = document.createElement('a');
-      link.download = `${parameters.toolType}-drawing.dxf`;
-      link.href = url;
-      link.click();
-      
-      // Clean up
-      URL.revokeObjectURL(url);
+      if (drawingUrl) {
+        setAutocadDrawingUrl(drawingUrl);
+        toast.success("Drawing generated successfully with AutoCAD API");
+      } else {
+        toast.error("Failed to generate drawing");
+      }
+    } catch (error) {
+      console.error("Error generating drawing:", error);
+      toast.error("Error generating drawing. Check console for details.");
+    } finally {
+      setIsGenerating(false);
       setExportLoading(false);
-      toast.success("DXF file exported successfully");
-    }, 1500);
+    }
   };
 
-  // Function to simulate PDF export
-  const handleExportPDF = () => {
+  const handleExportPDFWithAutocad = async () => {
+    if (!autocadDrawingUrl) {
+      toast.error("Please generate a drawing first");
+      return;
+    }
+    
     setExportLoading(true);
     
-    // Simulate API call to PDF generation service
-    setTimeout(() => {
-      // In a real implementation, this would properly convert canvas data to PDF
-      // or call an external service like AutoCAD or SolidWorks API
-      let canvasToExport;
+    try {
+      const pdfUrl = await generatePDF(autocadDrawingUrl);
       
-      switch (activeTab) {
-        case 'front-view':
-          canvasToExport = frontViewCanvasRef.current;
-          break;
-        case 'side-view':
-          canvasToExport = sideViewCanvasRef.current;
-          break;
-        case 'top-view':
-          canvasToExport = topViewCanvasRef.current;
-          break;
-        case 'isometric-view':
-          canvasToExport = isometricViewCanvasRef.current;
-          break;
-        default:
-          canvasToExport = frontViewCanvasRef.current;
+      if (pdfUrl) {
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `${parameters.toolType}-autocad.pdf`;
+        link.click();
+        
+        toast.success("PDF generated and downloaded successfully");
+      } else {
+        toast.error("Failed to generate PDF");
       }
-      
-      if (!canvasToExport) {
-        setExportLoading(false);
-        return;
-      }
-      
-      // This would normally create a proper PDF with technical drawing standards
-      // but we'll simply use the PNG data for demonstration
-      const dataUrl = canvasToExport.toDataURL('image/png');
-      
-      // Force download
-      const link = document.createElement('a');
-      link.download = `${parameters.toolType}-${activeTab}.pdf`;
-      link.href = dataUrl;
-      link.click();
-      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Error generating PDF. Check console for details.");
+    } finally {
       setExportLoading(false);
-      toast.success("PDF file exported successfully");
-    }, 1500);
+    }
+  };
+
+  const handleExportPNGWithAutocad = async () => {
+    if (!autocadDrawingUrl) {
+      toast.error("Please generate a drawing first");
+      return;
+    }
+    
+    setExportLoading(true);
+    
+    try {
+      const pngUrl = await exportAsPNG(autocadDrawingUrl);
+      
+      if (pngUrl) {
+        const link = document.createElement('a');
+        link.href = pngUrl;
+        link.download = `${parameters.toolType}-autocad.png`;
+        link.click();
+        
+        toast.success("PNG generated and downloaded successfully");
+      } else {
+        toast.error("Failed to generate PNG");
+      }
+    } catch (error) {
+      console.error("Error generating PNG:", error);
+      toast.error("Error generating PNG. Check console for details.");
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   const handleZoomIn = () => {
@@ -643,21 +571,36 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleExportDXF}
-                disabled={exportLoading}
+                onClick={handleExportWithAutocad}
+                disabled={isGenerating || exportLoading}
               >
                 <FileText className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">DXF</span>
+                <span className="hidden sm:inline">Generate with AutoCAD</span>
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleExportPDF}
-                disabled={exportLoading}
-              >
-                <FileText className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">PDF</span>
-              </Button>
+              
+              {autocadDrawingUrl && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleExportPDFWithAutocad}
+                    disabled={exportLoading}
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">AutoCAD PDF</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleExportPNGWithAutocad}
+                    disabled={exportLoading}
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">AutoCAD PNG</span>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -725,6 +668,23 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
               </div>
             </TabsContent>
           </Tabs>
+          
+          {isGenerating && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30 flex items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <p className="text-blue-800 dark:text-blue-400">Generating drawing with AutoCAD API...</p>
+              </div>
+            </div>
+          )}
+          
+          {autocadDrawingUrl && !isGenerating && (
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800/30">
+              <p className="text-sm text-green-800 dark:text-green-400">
+                AutoCAD drawing generated successfully. You can now export to PDF or PNG.
+              </p>
+            </div>
+          )}
           
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30">
             <h4 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">Drawing Details</h4>
