@@ -49,6 +49,11 @@ const Generator = () => {
     setParameters(updatedParams);
   };
 
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    localStorage.setItem("selectedTemplate", templateId);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
@@ -79,14 +84,19 @@ const Generator = () => {
                 <InfoIcon className="h-5 w-5 text-yellow-600" />
                 <AlertTitle>Drawing Template Required</AlertTitle>
                 <AlertDescription>
-                  Please select a drawing template in the Template tab to generate drawings.
+                  Please select a drawing template in the Templates tab to generate drawings.
                 </AlertDescription>
               </Alert>
             )}
             
             {/* Parameters Form */}
             <div className="grid grid-cols-1 gap-6">
-              <ParametricForm parameters={parameters} onParametersChange={handleParameterChange} />
+              <ParametricForm 
+                parameters={parameters} 
+                onParametersChange={handleParameterChange} 
+                selectedTemplate={selectedTemplate}
+                onTemplateSelect={handleTemplateSelect}
+              />
             </div>
             
             {/* Validation Warning */}

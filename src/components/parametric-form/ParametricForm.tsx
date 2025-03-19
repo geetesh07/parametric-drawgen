@@ -1,9 +1,9 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ParametersTab } from "../forms/ParametersTab";
-import { TemplateTab } from "../forms/TemplateTab";
+import { TemplateSelector } from "../autocad/TemplateSelector";
 
 export type ToolParameters = {
   toolType: string;
@@ -20,9 +20,16 @@ export type ToolParameters = {
 interface ParametricFormProps {
   parameters: ToolParameters;
   onParametersChange: (params: ToolParameters) => void;
+  selectedTemplate: string | null;
+  onTemplateSelect: (templateId: string) => void;
 }
 
-export function ParametricForm({ parameters, onParametersChange }: ParametricFormProps) {
+export function ParametricForm({ 
+  parameters, 
+  onParametersChange, 
+  selectedTemplate,
+  onTemplateSelect 
+}: ParametricFormProps) {
   const handleChange = (name: keyof ToolParameters, value: string | number) => {
     onParametersChange({
       ...parameters,
@@ -46,7 +53,7 @@ export function ParametricForm({ parameters, onParametersChange }: ParametricFor
       <Tabs defaultValue="parameters" className="w-full">
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="parameters">Parameters</TabsTrigger>
-          <TabsTrigger value="template">Template</TabsTrigger>
+          <TabsTrigger value="template">Templates</TabsTrigger>
         </TabsList>
         
         <TabsContent value="parameters" className="space-y-4">
@@ -57,7 +64,10 @@ export function ParametricForm({ parameters, onParametersChange }: ParametricFor
         </TabsContent>
         
         <TabsContent value="template" className="space-y-4">
-          <TemplateTab />
+          <TemplateSelector 
+            onTemplateSelect={onTemplateSelect}
+            selectedTemplate={selectedTemplate}
+          />
         </TabsContent>
       </Tabs>
     </Card>
