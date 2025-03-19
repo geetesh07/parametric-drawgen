@@ -23,11 +23,15 @@ const Generator = () => {
   
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiKeysConfigured, setApiKeysConfigured] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   
-  // Check if API keys are configured
+  // Check if API keys and template are configured
   useEffect(() => {
     const keys = localStorage.getItem("autocadApiKeys");
     setApiKeysConfigured(!!keys);
+    
+    const template = localStorage.getItem("selectedTemplate");
+    setSelectedTemplate(template);
   }, []);
   
   // Validate dimensions whenever parameters change
@@ -69,6 +73,17 @@ const Generator = () => {
               </Alert>
             )}
             
+            {/* Template Status Alert */}
+            {(apiKeysConfigured && !selectedTemplate) && (
+              <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800/30">
+                <InfoIcon className="h-5 w-5 text-yellow-600" />
+                <AlertTitle>Drawing Template Required</AlertTitle>
+                <AlertDescription>
+                  Please select a drawing template in the Template tab to generate drawings.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Parameters Form */}
             <div className="grid grid-cols-1 gap-6">
               <ParametricForm parameters={parameters} onParametersChange={handleParameterChange} />
@@ -85,7 +100,10 @@ const Generator = () => {
             
             {/* Multi-view Drawing Preview */}
             <div className="grid grid-cols-1 gap-6">
-              <DrawingPreview parameters={parameters} />
+              <DrawingPreview 
+                parameters={parameters} 
+                templateId={selectedTemplate || "template-endmill"} 
+              />
             </div>
           </div>
         </div>
