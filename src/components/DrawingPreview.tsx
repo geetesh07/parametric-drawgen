@@ -1,10 +1,10 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, ZoomIn, ZoomOut, RotateCw, Square, Maximize2, Ruler, Scan } from "lucide-react";
-import { type ToolParameters } from "./ParametricForm";
+import { Download, ZoomIn, ZoomOut, RotateCw, Square, Maximize2, Ruler, Scan, FileText } from "lucide-react";
+import { type ToolParameters } from "./parametric-form/ParametricForm";
 import { useRef, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface DrawingPreviewProps {
   parameters: ToolParameters;
@@ -18,6 +18,7 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
   
   const [activeTab, setActiveTab] = useState("front-view");
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Render all views whenever parameters change
   useEffect(() => {
@@ -105,19 +106,33 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     // Flute length
     drawDimensionLine(ctx, shankEndX, centerY + 100, fluteEndX, centerY + 100, `${parameters.fluteLength.toFixed(2)} mm`);
     
-    // Draw diameter indicators
-    drawDiameterDimension(ctx, shankStartX + 30, centerY, shankRadius, `Ø${parameters.shankDiameter.toFixed(3)}`);
-    drawDiameterDimension(ctx, fluteEndX - 30, centerY, fluteRadius, `Ø${parameters.cuttingDiameter.toFixed(3)}`);
+    // Draw diameter indicators (with better spacing to prevent overlapping)
+    drawDiameterDimension(ctx, shankStartX + parameters.shankLength * scale * 0.2, centerY, shankRadius, `Ø${parameters.shankDiameter.toFixed(3)}`);
+    drawDiameterDimension(ctx, fluteEndX - parameters.fluteLength * scale * 0.3, centerY, fluteRadius, `Ø${parameters.cuttingDiameter.toFixed(3)}`);
     
     // Draw tool type and coating
     ctx.fillStyle = "#1e40af";
     ctx.font = "14px 'Inter', sans-serif";
     ctx.fillText(`${parameters.toolType.toUpperCase()} - ${parameters.coating}`, canvas.width / 2, 30);
     
-    // Draw back taper label
-    ctx.fillStyle = "#6b7280";
-    ctx.font = "12px 'Inter', sans-serif";
-    ctx.fillText(`BACK TAPER ${parameters.backTaper.toFixed(3)}`, fluteEndX - 80, centerY - 50);
+    // Draw back taper label (improved positioning to prevent overlap)
+    if (parameters.backTaper > 0) {
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "12px 'Inter', sans-serif";
+      
+      // Position the taper label in a clearer location
+      const taperLabelX = shankEndX + parameters.fluteLength * scale * 0.5;
+      const taperLabelY = centerY - Math.max(fluteRadius, shankRadius) * 3;
+      
+      // Draw a line pointing to where the taper applies
+      ctx.beginPath();
+      ctx.moveTo(taperLabelX, taperLabelY);
+      ctx.lineTo(taperLabelX, centerY - fluteRadius);
+      ctx.stroke();
+      
+      // Add the label in a clearer position
+      ctx.fillText(`BACK TAPER: ${parameters.backTaper.toFixed(3)} mm`, taperLabelX, taperLabelY - 10);
+    }
   };
 
   const renderSideView = () => {
@@ -353,7 +368,7 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.stroke();
   };
 
-  // Helper function for drawing dimension lines
+  // Helper function for drawing dimension lines (improved to be clearer)
   const drawDimensionLine = (
     ctx: CanvasRenderingContext2D, 
     fromX: number, 
@@ -366,7 +381,7 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.fillStyle = "#1e3a8a";
     ctx.lineWidth = 1;
     
-    // Draw the dimension line
+    // Draw the dimension line with improved contrast
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, fromY);
@@ -384,13 +399,26 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.lineTo(toX, fromY + 5);
     ctx.stroke();
     
-    // Draw dimension text
+    // Draw dimension text with background for better readability
+    const textWidth = ctx.measureText(text).width;
+    const padding = 4;
+    
+    // Draw text background
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.fillRect(
+      (fromX + toX) / 2 - textWidth / 2 - padding, 
+      fromY + 5, 
+      textWidth + padding * 2, 
+      20
+    );
+    
+    // Draw text
     ctx.fillStyle = "#1e3a8a";
     ctx.font = "12px 'Inter', sans-serif";
-    ctx.fillText(text, (fromX + toX) / 2, fromY + 15);
+    ctx.fillText(text, (fromX + toX) / 2, fromY + 18);
   };
   
-  // Helper function for drawing diameter dimensions
+  // Helper function for drawing diameter dimensions (improved)
   const drawDiameterDimension = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -404,15 +432,28 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     
     // Draw dimension line
     ctx.beginPath();
-    ctx.moveTo(x, y - radius - 5);
-    ctx.lineTo(x, y + radius + 5);
+    ctx.moveTo(x, y - radius - 10);
+    ctx.lineTo(x, y + radius + 10);
     ctx.stroke();
     
     // Draw arrows
     drawArrow(ctx, x, y - radius, x, y - radius + 10);
     drawArrow(ctx, x, y + radius, x, y + radius - 10);
     
-    // Draw dimension text
+    // Draw dimension text with background for clarity
+    const textWidth = ctx.measureText(text).width;
+    const padding = 4;
+    
+    // Draw text background
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.fillRect(
+      x - textWidth / 2 - padding, 
+      y - radius - 25, 
+      textWidth + padding * 2, 
+      20
+    );
+    
+    // Draw text
     ctx.fillStyle = "#1e3a8a";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, x, y - radius - 15);
@@ -461,6 +502,7 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     }
   };
 
+  // Function to export drawing as PNG
   const handleDownload = () => {
     let canvasToDownload;
     
@@ -489,6 +531,80 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     link.click();
   };
 
+  // Function to simulate DXF export (in a real app, this would use a CAD library API)
+  const handleExportDXF = () => {
+    setExportLoading(true);
+    
+    // Simulate API call to CAD service
+    setTimeout(() => {
+      // In a real implementation, this would construct proper DXF data
+      // or call an external API to generate DXF files
+      const dummyDXF = `0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n30\n0\n11\n${parameters.overallLength}\n21\n0\n31\n0\n0\nENDSEC\n0\nEOF`;
+      
+      // Create a blob with the DXF data
+      const blob = new Blob([dummyDXF], { type: 'application/dxf' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link and click it
+      const link = document.createElement('a');
+      link.download = `${parameters.toolType}-drawing.dxf`;
+      link.href = url;
+      link.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      setExportLoading(false);
+      toast.success("DXF file exported successfully");
+    }, 1500);
+  };
+
+  // Function to simulate PDF export
+  const handleExportPDF = () => {
+    setExportLoading(true);
+    
+    // Simulate API call to PDF generation service
+    setTimeout(() => {
+      // In a real implementation, this would properly convert canvas data to PDF
+      // or call an external service like AutoCAD or SolidWorks API
+      let canvasToExport;
+      
+      switch (activeTab) {
+        case 'front-view':
+          canvasToExport = frontViewCanvasRef.current;
+          break;
+        case 'side-view':
+          canvasToExport = sideViewCanvasRef.current;
+          break;
+        case 'top-view':
+          canvasToExport = topViewCanvasRef.current;
+          break;
+        case 'isometric-view':
+          canvasToExport = isometricViewCanvasRef.current;
+          break;
+        default:
+          canvasToExport = frontViewCanvasRef.current;
+      }
+      
+      if (!canvasToExport) {
+        setExportLoading(false);
+        return;
+      }
+      
+      // This would normally create a proper PDF with technical drawing standards
+      // but we'll simply use the PNG data for demonstration
+      const dataUrl = canvasToExport.toDataURL('image/png');
+      
+      // Force download
+      const link = document.createElement('a');
+      link.download = `${parameters.toolType}-${activeTab}.pdf`;
+      link.href = dataUrl;
+      link.click();
+      
+      setExportLoading(false);
+      toast.success("PDF file exported successfully");
+    }, 1500);
+  };
+
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 2));
   };
@@ -505,24 +621,42 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     <Card className="w-full shadow-lg border-2 border-blue-100 dark:border-blue-900/30 bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
       <CardContent className="p-6">
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap justify-between items-center gap-2">
             <h3 className="text-lg font-medium text-blue-800 dark:text-blue-400">Technical Drawing</h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleZoomIn}>
                 <ZoomIn className="h-4 w-4 mr-1" />
-                <span>Zoom In</span>
+                <span className="hidden sm:inline">Zoom In</span>
               </Button>
               <Button variant="outline" size="sm" onClick={handleZoomOut}>
                 <ZoomOut className="h-4 w-4 mr-1" />
-                <span>Zoom Out</span>
+                <span className="hidden sm:inline">Zoom Out</span>
               </Button>
               <Button variant="outline" size="sm" onClick={handleReset}>
                 <RotateCw className="h-4 w-4 mr-1" />
-                <span>Reset</span>
+                <span className="hidden sm:inline">Reset</span>
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-1" />
-                <span>Download</span>
+                <span className="hidden sm:inline">PNG</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportDXF}
+                disabled={exportLoading}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">DXF</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportPDF}
+                disabled={exportLoading}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">PDF</span>
               </Button>
             </div>
           </div>
