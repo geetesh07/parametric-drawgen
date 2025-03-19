@@ -37,9 +37,7 @@ export async function getAccessToken(): Promise<string | null> {
 
     const keys = JSON.parse(keysString);
     
-    // In a real implementation, you would need to use a proxy server or 
-    // edge function to avoid exposing your client secret
-    // This is a simplified implementation for demonstration purposes
+    // Updated to use the current OAuth 2.0 endpoint
     const formData = new URLSearchParams();
     formData.append("client_id", keys.clientId);
     formData.append("client_secret", keys.clientSecret);
@@ -47,7 +45,7 @@ export async function getAccessToken(): Promise<string | null> {
     formData.append("scope", "data:read data:write");
 
     const response = await fetch(
-      "https://developer.api.autodesk.com/authentication/v1/authenticate",
+      "https://developer.api.autodesk.com/authentication/v2/token",
       {
         method: "POST",
         headers: {
@@ -58,6 +56,8 @@ export async function getAccessToken(): Promise<string | null> {
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Authentication error response:", errorText);
       throw new Error(`Authentication failed: ${response.statusText}`);
     }
 

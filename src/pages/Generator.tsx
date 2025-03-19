@@ -5,7 +5,8 @@ import { Footer } from "@/components/Footer";
 import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, InfoIcon } from "lucide-react";
+import { Toaster } from "sonner";
 
 const Generator = () => {
   const [parameters, setParameters] = useState<ToolParameters>({
@@ -21,6 +22,13 @@ const Generator = () => {
   });
   
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [apiKeysConfigured, setApiKeysConfigured] = useState<boolean>(false);
+  
+  // Check if API keys are configured
+  useEffect(() => {
+    const keys = localStorage.getItem("autocadApiKeys");
+    setApiKeysConfigured(!!keys);
+  }, []);
   
   // Validate dimensions whenever parameters change
   useEffect(() => {
@@ -50,6 +58,17 @@ const Generator = () => {
           </div>
           
           <div className="space-y-8">
+            {/* API Status Alert */}
+            {!apiKeysConfigured && (
+              <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/30">
+                <InfoIcon className="h-5 w-5 text-blue-600" />
+                <AlertTitle>AutoCAD API Keys Required</AlertTitle>
+                <AlertDescription>
+                  To generate professional drawings using the AutoCAD API, please configure your API keys in the Template tab.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Parameters Form */}
             <div className="grid grid-cols-1 gap-6">
               <ParametricForm parameters={parameters} onParametersChange={handleParameterChange} />
@@ -72,6 +91,7 @@ const Generator = () => {
         </div>
       </main>
       <Footer />
+      <Toaster />
     </div>
   );
 };
