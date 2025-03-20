@@ -1,3 +1,4 @@
+
 // Types for AutoCAD API responses
 interface AccessTokenResponse {
   access_token: string;
@@ -10,6 +11,7 @@ interface DrawingTemplate {
   name: string;
   description: string;
   content?: string;
+  fileType?: string;
 }
 
 // Cached token info
@@ -21,8 +23,8 @@ let tokenCache: {
 // Fixed API keys for development purposes
 // In production, you should use a more secure method
 const FIXED_API_KEYS = {
-  clientId: "YOUR_DEMO_CLIENT_ID",
-  clientSecret: "YOUR_DEMO_CLIENT_SECRET"
+  clientId: "YourFixedClientId",
+  clientSecret: "YourFixedClientSecret"
 };
 
 /**
@@ -154,6 +156,43 @@ function generateDrawingContent(parameters: any, templateId: string): string {
   
   const { toolType, overallLength, cuttingDiameter, shankDiameter, fluteLength, shankLength } = parameters;
   
+  // Try to find a custom template first
+  const customTemplatesString = localStorage.getItem("customTemplates");
+  let template: DrawingTemplate | undefined;
+  
+  if (customTemplatesString) {
+    const customTemplates = JSON.parse(customTemplatesString) as DrawingTemplate[];
+    template = customTemplates.find(t => t.id === templateId);
+  }
+  
+  // If a custom template is found and it's a DWG/DWT file, we would use that as the base
+  // Since we can't actually modify DWG files in the browser, we'll just simulate it
+  if (template && template.fileType && ['dwg', 'dwt'].includes(template.fileType)) {
+    // In a real implementation, you would send the template and parameters to a server
+    // that would modify the DWG file with the new parameters
+    // For now, we'll just generate a SVG that mentions we'd use the template
+    
+    // Calculate scale and dimensions
+    const scale = 2;
+    const width = Math.max(overallLength, 200) * scale;
+    const height = Math.max(cuttingDiameter * 4, 100) * scale;
+    
+    // Complete SVG document
+    return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" fill="white"/>
+      <text x="10" y="30" font-family="Arial" font-size="20" font-weight="bold">${toolType.toUpperCase()} - Technical Drawing (Using Custom DWG/DWT)</text>
+      <text x="10" y="50" font-family="Arial" font-size="14">Template: ${template.name}</text>
+      <text x="10" y="70" font-family="Arial" font-size="14">This drawing would use the uploaded DWG/DWT template with these parameters:</text>
+      <text x="30" y="100" font-family="Arial" font-size="12">Overall Length: ${overallLength.toFixed(3)} mm</text>
+      <text x="30" y="120" font-family="Arial" font-size="12">Cutting Diameter: ${cuttingDiameter.toFixed(3)} mm</text>
+      <text x="30" y="140" font-family="Arial" font-size="12">Shank Diameter: ${shankDiameter.toFixed(3)} mm</text>
+      <text x="30" y="160" font-family="Arial" font-size="12">Flute Length: ${fluteLength.toFixed(3)} mm</text>
+      <text x="30" y="180" font-family="Arial" font-size="12">Shank Length: ${shankLength.toFixed(3)} mm</text>
+    </svg>`;
+  }
+  
+  // If no custom template or it's not a DWG/DWT, use the standard SVG generation
   // Calculate scale and dimensions
   const scale = 2;
   const width = Math.max(overallLength, 200) * scale;
@@ -269,8 +308,13 @@ export async function getTemplates(): Promise<DrawingTemplate[]> {
       throw new Error("Failed to get access token");
     }
 
-    // For demo purposes, return predefined templates
-    return [
+    // Get custom templates from localStorage
+    const customTemplatesString = localStorage.getItem("customTemplates");
+    const customTemplates = customTemplatesString ? 
+      JSON.parse(customTemplatesString) as DrawingTemplate[] : [];
+
+    // For demo purposes, return predefined templates along with any custom templates
+    const builtInTemplates = [
       {
         id: "template-endmill",
         name: "Standard End Mill",
@@ -287,6 +331,8 @@ export async function getTemplates(): Promise<DrawingTemplate[]> {
         description: "Template for standard reamer tools"
       }
     ];
+    
+    return [...builtInTemplates, ...customTemplates];
   } catch (error) {
     console.error("Error fetching templates:", error);
     return [];
@@ -302,6 +348,7 @@ export async function uploadTemplate(templateData: {
   name: string;
   description: string;
   content: string;
+  fileType?: string;
 }): Promise<string | null> {
   try {
     // Generate a unique ID for the template
@@ -317,7 +364,8 @@ export async function uploadTemplate(templateData: {
       id: templateId,
       name: templateData.name,
       description: templateData.description,
-      content: templateData.content
+      content: templateData.content,
+      fileType: templateData.fileType
     };
     
     existingTemplates.push(newTemplate);

@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Key, Save, Lock, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface AutocadApiKeys {
-  clientId: string;
-  clientSecret: string;
-}
+// Fixed API keys for production use
+const FIXED_API_KEYS = {
+  clientId: "YourFixedClientId",
+  clientSecret: "YourFixedClientSecret"
+};
 
 // Fixed demo keys
 const DEMO_KEYS = {
@@ -21,7 +23,7 @@ const DEMO_KEYS = {
 
 export function ApiKeyForm() {
   // Load keys from localStorage if they exist
-  const [keys, setKeys] = useState<AutocadApiKeys>(() => {
+  const [keys, setKeys] = useState(() => {
     const savedKeys = localStorage.getItem("autocadApiKeys");
     return savedKeys ? JSON.parse(savedKeys) : {
       clientId: "",
@@ -34,6 +36,7 @@ export function ApiKeyForm() {
   );
 
   const [useDemoKeys, setUseDemoKeys] = useState(!isStored);
+  const [useFixedKeys, setUseFixedKeys] = useState(false);
 
   useEffect(() => {
     // If user chooses to use demo keys, save them to localStorage
@@ -41,8 +44,19 @@ export function ApiKeyForm() {
       localStorage.setItem("autocadApiKeys", JSON.stringify(DEMO_KEYS));
       setKeys(DEMO_KEYS);
       setIsStored(true);
+      setUseFixedKeys(false);
     }
   }, [useDemoKeys]);
+
+  useEffect(() => {
+    // If user chooses to use fixed keys, save them to localStorage
+    if (useFixedKeys) {
+      localStorage.setItem("autocadApiKeys", JSON.stringify(FIXED_API_KEYS));
+      setKeys(FIXED_API_KEYS);
+      setIsStored(true);
+      setUseDemoKeys(false);
+    }
+  }, [useFixedKeys]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -63,6 +77,7 @@ export function ApiKeyForm() {
     localStorage.setItem("autocadApiKeys", JSON.stringify(keys));
     setIsStored(true);
     setUseDemoKeys(false);
+    setUseFixedKeys(false);
     toast.success("API keys saved successfully");
   };
 
@@ -71,12 +86,8 @@ export function ApiKeyForm() {
     setKeys({ clientId: "", clientSecret: "" });
     setIsStored(false);
     setUseDemoKeys(false);
+    setUseFixedKeys(false);
     toast.info("API keys cleared");
-  };
-
-  const useDemoApiKeys = () => {
-    setUseDemoKeys(true);
-    toast.success("Using demo API keys");
   };
 
   return (
@@ -91,6 +102,23 @@ export function ApiKeyForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/30">
+          <AlertDescription>
+            You can use the options below for quick setup, or enter your own API keys for production use.
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/10 p-3 rounded-md">
+          <Switch 
+            id="useFixedKeys" 
+            checked={useFixedKeys} 
+            onCheckedChange={setUseFixedKeys}
+          />
+          <Label htmlFor="useFixedKeys" className="text-blue-700 dark:text-blue-400">
+            Use fixed API keys (recommended)
+          </Label>
+        </div>
+
         <div className="flex items-center space-x-2 bg-amber-50 dark:bg-amber-900/10 p-3 rounded-md">
           <Switch 
             id="useDemoKeys" 
@@ -102,7 +130,7 @@ export function ApiKeyForm() {
           </Label>
         </div>
 
-        {!useDemoKeys && (
+        {!useDemoKeys && !useFixedKeys && (
           <>
             <div className="space-y-2">
               <Label htmlFor="clientId" className="text-blue-800 dark:text-blue-400">
@@ -141,7 +169,7 @@ export function ApiKeyForm() {
           <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-md border border-green-200 dark:border-green-800/30 flex items-center gap-2">
             <Lock className="h-4 w-4 text-green-600" />
             <span className="text-sm text-green-700 dark:text-green-400">
-              {useDemoKeys ? "Using demo API keys" : "API keys are stored in your browser"}
+              {useDemoKeys ? "Using demo API keys" : useFixedKeys ? "Using fixed API keys" : "API keys are stored in your browser"}
             </span>
           </div>
         )}
@@ -150,13 +178,16 @@ export function ApiKeyForm() {
         <Button variant="outline" onClick={clearApiKeys} disabled={!isStored}>
           Clear Keys
         </Button>
-        {!useDemoKeys ? (
+        {!useDemoKeys && !useFixedKeys ? (
           <Button onClick={saveApiKeys} className="gap-1">
             <Save className="h-4 w-4" />
             Save Keys
           </Button>
         ) : (
-          <Button onClick={() => setUseDemoKeys(false)} variant="outline" className="gap-1">
+          <Button onClick={() => {
+            setUseDemoKeys(false);
+            setUseFixedKeys(false);
+          }} variant="outline" className="gap-1">
             <RotateCcw className="h-4 w-4" />
             Use Custom Keys
           </Button>
