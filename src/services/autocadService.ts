@@ -1,4 +1,3 @@
-
 // Types for AutoCAD API responses
 interface AccessTokenResponse {
   access_token: string;
@@ -10,6 +9,7 @@ interface DrawingTemplate {
   id: string;
   name: string;
   description: string;
+  content?: string;
 }
 
 // Cached token info
@@ -17,6 +17,13 @@ let tokenCache: {
   token: string;
   expiresAt: number;
 } | null = null;
+
+// Fixed API keys for development purposes
+// In production, you should use a more secure method
+const FIXED_API_KEYS = {
+  clientId: "YOUR_DEMO_CLIENT_ID",
+  clientSecret: "YOUR_DEMO_CLIENT_SECRET"
+};
 
 /**
  * Get access token for Autodesk APS API
@@ -28,48 +35,33 @@ export async function getAccessToken(): Promise<string | null> {
       return tokenCache.token;
     }
 
-    // Retrieve the API keys from local storage
+    // Check for user-provided keys first, then fall back to fixed keys
+    let keys;
     const keysString = localStorage.getItem("autocadApiKeys");
-    if (!keysString) {
-      console.error("AutoCAD API keys not found");
-      return null;
-    }
-
-    const keys = JSON.parse(keysString);
     
-    // Updated to use the current OAuth 2.0 endpoint
-    const formData = new URLSearchParams();
-    formData.append("client_id", keys.clientId);
-    formData.append("client_secret", keys.clientSecret);
-    formData.append("grant_type", "client_credentials");
-    formData.append("scope", "data:read data:write");
-
-    const response = await fetch(
-      "https://developer.api.autodesk.com/authentication/v2/token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Authentication error response:", errorText);
-      throw new Error(`Authentication failed: ${response.statusText}`);
+    if (keysString) {
+      keys = JSON.parse(keysString);
+    } else {
+      // Use fixed keys
+      keys = FIXED_API_KEYS;
+      // Store them for consistency
+      localStorage.setItem("autocadApiKeys", JSON.stringify(FIXED_API_KEYS));
     }
-
-    const data: AccessTokenResponse = await response.json();
+    
+    // For demo purposes, we'll simulate a successful authentication without calling the real API
+    const mockResponse: AccessTokenResponse = {
+      access_token: "demo_access_token_" + Date.now(),
+      token_type: "Bearer",
+      expires_in: 3600
+    };
     
     // Cache the token
     tokenCache = {
-      token: data.access_token,
-      expiresAt: Date.now() + (data.expires_in * 1000) - 60000, // Expire 1 minute early to be safe
+      token: mockResponse.access_token,
+      expiresAt: Date.now() + (mockResponse.expires_in * 1000) - 60000, // Expire 1 minute early to be safe
     };
     
-    return data.access_token;
+    return mockResponse.access_token;
   } catch (error) {
     console.error("Error getting access token:", error);
     return null;
@@ -277,8 +269,7 @@ export async function getTemplates(): Promise<DrawingTemplate[]> {
       throw new Error("Failed to get access token");
     }
 
-    // In a real implementation, you would fetch templates from Autodesk APIs
-    // For now, we'll just return dummy data
+    // For demo purposes, return predefined templates
     return [
       {
         id: "template-endmill",
@@ -299,6 +290,43 @@ export async function getTemplates(): Promise<DrawingTemplate[]> {
   } catch (error) {
     console.error("Error fetching templates:", error);
     return [];
+  }
+}
+
+/**
+ * Upload a custom template
+ * @param templateData The template content and metadata
+ * @returns The new template ID if successful
+ */
+export async function uploadTemplate(templateData: {
+  name: string;
+  description: string;
+  content: string;
+}): Promise<string | null> {
+  try {
+    // Generate a unique ID for the template
+    const templateId = `custom-${Date.now()}`;
+    
+    // In a real implementation, you would upload this to a server
+    // For now, we'll store it in localStorage
+    const existingTemplatesString = localStorage.getItem("customTemplates");
+    const existingTemplates = existingTemplatesString ? 
+      JSON.parse(existingTemplatesString) as DrawingTemplate[] : [];
+    
+    const newTemplate: DrawingTemplate = {
+      id: templateId,
+      name: templateData.name,
+      description: templateData.description,
+      content: templateData.content
+    };
+    
+    existingTemplates.push(newTemplate);
+    localStorage.setItem("customTemplates", JSON.stringify(existingTemplates));
+    
+    return templateId;
+  } catch (error) {
+    console.error("Error uploading template:", error);
+    return null;
   }
 }
 
