@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -66,7 +67,7 @@ const Generator = () => {
       <Navbar />
       <main className="flex-1 pt-24 pb-16">
         <div className="container max-w-6xl mx-auto px-4">
-          <div className="mb-8 flex justify-between items-center">
+          <div className="mb-8 flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2 text-gradient">Parametric Drawing Generator</h1>
               <p className="text-muted-foreground">
@@ -76,9 +77,9 @@ const Generator = () => {
             
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
               <DialogTrigger asChild>
-                <Button variant="default" className="gap-2">
-                  <Key className="h-4 w-4" />
-                  AutoCAD API Settings
+                <Button variant="default" size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                  <Key className="h-5 w-5" />
+                  Configure AutoCAD API Keys
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
@@ -101,7 +102,7 @@ const Generator = () => {
                 <AlertCircle className="h-5 w-5" />
                 <AlertTitle>AutoCAD API Keys Required</AlertTitle>
                 <AlertDescription>
-                  To generate actual drawings using the AutoCAD API, please set up your Autodesk APS API keys using the AutoCAD API Settings button above.
+                  To generate actual drawings using the AutoCAD API, please set up your Autodesk APS API keys using the Configure AutoCAD API Keys button above.
                 </AlertDescription>
               </Alert>
             )}

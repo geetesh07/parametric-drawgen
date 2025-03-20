@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Key, Save, Lock, RotateCcw } from "lucide-react";
+import { Key, Save, Lock, RotateCcw, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ApiKeyForm() {
   // Load keys from localStorage if they exist
@@ -68,15 +69,38 @@ export function ApiKeyForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/30">
-          <AlertDescription>
-            To use the actual Autodesk APS API, you need to provide your real APS credentials.
-            You can get these from the <a href="https://aps.autodesk.com/" target="_blank" rel="noopener noreferrer" className="font-medium underline">Autodesk APS Portal</a> after creating an application.
+          <AlertTitle className="flex items-center gap-2">
+            <Info className="h-4 w-4" /> Important API Information
+          </AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              Autodesk has migrated from Forge to APS with updated authentication. To get your APS credentials:
+            </p>
+            <ol className="list-decimal ml-5 space-y-1">
+              <li>Visit the <a href="https://aps.autodesk.com/" target="_blank" rel="noopener noreferrer" className="font-medium underline">Autodesk APS Portal</a></li>
+              <li>Create an application in the APS dashboard</li>
+              <li>Copy the Client ID and Client Secret provided</li>
+              <li>Make sure your application has the proper scopes selected (data:read, data:write, etc.)</li>
+            </ol>
+            <p className="text-sm italic mt-2">
+              Note: If you're getting authentication errors, ensure your application is registered for the APS platform, not the legacy Forge platform.
+            </p>
           </AlertDescription>
         </Alert>
 
         <div className="space-y-2">
           <Label htmlFor="clientId" className="text-blue-800 dark:text-blue-400">
             Client ID
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 ml-1 inline-block text-blue-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>The Client ID from your Autodesk APS application dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </Label>
           <Input
             id="clientId"
@@ -90,6 +114,16 @@ export function ApiKeyForm() {
         <div className="space-y-2">
           <Label htmlFor="clientSecret" className="text-blue-800 dark:text-blue-400">
             Client Secret
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 ml-1 inline-block text-blue-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>The Client Secret from your Autodesk APS application dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </Label>
           <Input
             id="clientSecret"
