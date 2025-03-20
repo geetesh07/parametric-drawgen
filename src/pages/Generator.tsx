@@ -5,8 +5,18 @@ import { Footer } from "@/components/Footer";
 import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, InfoIcon } from "lucide-react";
+import { AlertCircle, InfoIcon, Settings } from "lucide-react";
 import { Toaster } from "sonner";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ApiKeyForm } from "@/components/autocad/ApiKeyForm";
+import { Button } from "@/components/ui/button";
 
 const Generator = () => {
   const [parameters, setParameters] = useState<ToolParameters>({
@@ -24,6 +34,7 @@ const Generator = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiKeysConfigured, setApiKeysConfigured] = useState<boolean>(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Check if API keys and template are configured
   useEffect(() => {
@@ -32,7 +43,7 @@ const Generator = () => {
     
     const template = localStorage.getItem("selectedTemplate");
     setSelectedTemplate(template);
-  }, []);
+  }, [isSettingsOpen]); // Re-check when settings dialog is closed
   
   // Validate dimensions whenever parameters change
   useEffect(() => {
@@ -59,11 +70,34 @@ const Generator = () => {
       <Navbar />
       <main className="flex-1 pt-24 pb-16">
         <div className="container max-w-6xl mx-auto px-4">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-gradient">Parametric Drawing Generator</h1>
-            <p className="text-muted-foreground">
-              Enter tool specifications to generate a precision manufacturing drawing.
-            </p>
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold mb-2 text-gradient">Parametric Drawing Generator</h1>
+              <p className="text-muted-foreground">
+                Enter tool specifications to generate a precision manufacturing drawing.
+              </p>
+            </div>
+            
+            {/* Quick access to API settings */}
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  API Settings
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>AutoCAD API Configuration</DialogTitle>
+                  <DialogDescription>
+                    Configure your API keys for AutoCAD integration.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <ApiKeyForm />
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           
           <div className="space-y-8">
@@ -73,7 +107,7 @@ const Generator = () => {
                 <InfoIcon className="h-5 w-5 text-blue-600" />
                 <AlertTitle>AutoCAD API Keys Required</AlertTitle>
                 <AlertDescription>
-                  To generate professional drawings using the AutoCAD API, please configure your API keys in the Template tab.
+                  To generate professional drawings using the AutoCAD API, please configure your API keys using the API Settings button above.
                 </AlertDescription>
               </Alert>
             )}

@@ -38,23 +38,25 @@ export function ApiKeyForm() {
   const [useDemoKeys, setUseDemoKeys] = useState(!isStored);
   const [useFixedKeys, setUseFixedKeys] = useState(false);
 
+  // Handle demo keys toggle
   useEffect(() => {
-    // If user chooses to use demo keys, save them to localStorage
     if (useDemoKeys) {
       localStorage.setItem("autocadApiKeys", JSON.stringify(DEMO_KEYS));
       setKeys(DEMO_KEYS);
       setIsStored(true);
       setUseFixedKeys(false);
+      toast.success("Using demo API keys (Note: These won't connect to the real API)");
     }
   }, [useDemoKeys]);
 
+  // Handle fixed keys toggle
   useEffect(() => {
-    // If user chooses to use fixed keys, save them to localStorage
     if (useFixedKeys) {
       localStorage.setItem("autocadApiKeys", JSON.stringify(FIXED_API_KEYS));
       setKeys(FIXED_API_KEYS);
       setIsStored(true);
       setUseDemoKeys(false);
+      toast.success("Using fixed API keys");
     }
   }, [useFixedKeys]);
 
@@ -104,17 +106,18 @@ export function ApiKeyForm() {
       <CardContent className="space-y-4">
         <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/30">
           <AlertDescription>
-            You can use the options below for quick setup, or enter your own API keys for production use.
+            For this demo application, you can use the options below without needing real API keys.
+            In a production environment, you would use your actual Autodesk APS credentials.
           </AlertDescription>
         </Alert>
 
-        <div className="flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/10 p-3 rounded-md">
+        <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/10 p-3 rounded-md">
           <Switch 
             id="useFixedKeys" 
             checked={useFixedKeys} 
             onCheckedChange={setUseFixedKeys}
           />
-          <Label htmlFor="useFixedKeys" className="text-blue-700 dark:text-blue-400">
+          <Label htmlFor="useFixedKeys" className="text-green-700 dark:text-green-400">
             Use fixed API keys (recommended)
           </Label>
         </div>

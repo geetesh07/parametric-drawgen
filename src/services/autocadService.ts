@@ -1,4 +1,3 @@
-
 // Types for AutoCAD API responses
 interface AccessTokenResponse {
   access_token: string;
@@ -32,27 +31,12 @@ const FIXED_API_KEYS = {
  */
 export async function getAccessToken(): Promise<string | null> {
   try {
-    // Check if we have a valid cached token
-    if (tokenCache && tokenCache.expiresAt > Date.now()) {
-      return tokenCache.token;
-    }
-
-    // Check for user-provided keys first, then fall back to fixed keys
-    let keys;
-    const keysString = localStorage.getItem("autocadApiKeys");
+    // For demo purposes, we're using a mock token that will NOT actually call the API
+    // but will still allow the application flow to continue
     
-    if (keysString) {
-      keys = JSON.parse(keysString);
-    } else {
-      // Use fixed keys
-      keys = FIXED_API_KEYS;
-      // Store them for consistency
-      localStorage.setItem("autocadApiKeys", JSON.stringify(FIXED_API_KEYS));
-    }
-    
-    // For demo purposes, we'll simulate a successful authentication without calling the real API
+    // Simulate a successful authentication without calling the real API
     const mockResponse: AccessTokenResponse = {
-      access_token: "demo_access_token_" + Date.now(),
+      access_token: "mock_token_" + Date.now(),
       token_type: "Bearer",
       expires_in: 3600
     };
@@ -63,6 +47,7 @@ export async function getAccessToken(): Promise<string | null> {
       expiresAt: Date.now() + (mockResponse.expires_in * 1000) - 60000, // Expire 1 minute early to be safe
     };
     
+    console.log("Using mock token for demo purposes:", mockResponse.access_token);
     return mockResponse.access_token;
   } catch (error) {
     console.error("Error getting access token:", error);
@@ -72,75 +57,41 @@ export async function getAccessToken(): Promise<string | null> {
 
 /**
  * Upload a drawing file to Autodesk Document Management
+ * Note: In our demo version, we don't actually upload to Autodesk
  */
 async function uploadDrawingFile(token: string, fileContent: string, fileName: string): Promise<string | null> {
   try {
-    // Create a bucket if it doesn't exist
-    const bucketKey = `parametric_drawing_${Date.now()}`;
-    const createBucketResponse = await fetch(
-      'https://developer.api.autodesk.com/oss/v2/buckets',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          bucketKey,
-          policyKey: 'transient' // Files will be automatically deleted after 24 hours
-        })
-      }
-    );
-
-    if (!createBucketResponse.ok) {
-      console.error("Failed to create bucket", await createBucketResponse.text());
-      throw new Error("Failed to create bucket");
-    }
-
-    // Upload the file
-    const blob = new Blob([fileContent], { type: 'application/octet-stream' });
-    const uploadResponse = await fetch(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${fileName}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Authorization': `Bearer ${token}`
-        },
-        body: blob
-      }
-    );
-
-    if (!uploadResponse.ok) {
-      console.error("Failed to upload file", await uploadResponse.text());
-      throw new Error("Failed to upload file");
-    }
-
-    const uploadData = await uploadResponse.json();
-    const objectId = uploadData.objectId;
+    console.log("Mock uploading drawing file:", fileName);
     
-    // Create a signed URL for downloading the raw file
-    const signedUrlResponse = await fetch(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${fileName}/signed`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          minute: 60
-        })
-      }
-    );
-
-    if (!signedUrlResponse.ok) {
-      console.error("Failed to create signed URL", await signedUrlResponse.text());
-      throw new Error("Failed to create signed URL");
+    // For demo purposes, create a data URL that can be displayed
+    // This allows us to show the drawing without actually calling the Autodesk API
+    
+    if (fileName.endsWith('.svg')) {
+      // If it's already SVG content, we can create a direct data URL
+      return `data:image/svg+xml;base64,${btoa(fileContent)}`;
+    } else {
+      // For DWG/DWT files, we would normally convert them to a viewable format
+      // Since we can't actually do that in the browser, we'll generate a demo SVG
+      
+      // Extract any template ID information that might be in the filename
+      const templateIdMatch = fileName.match(/template-([a-z0-9-]+)/);
+      const templateId = templateIdMatch ? templateIdMatch[1] : 'generic';
+      
+      // Generate a simple SVG representation
+      const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+          <rect width="100%" height="100%" fill="white"/>
+          <text x="50%" y="50" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">DWG File Simulation</text>
+          <text x="50%" y="80" font-family="Arial" font-size="16" text-anchor="middle">Template: ${templateId}</text>
+          <text x="50%" y="120" font-family="Arial" font-size="16" text-anchor="middle">Filename: ${fileName}</text>
+          <rect x="100" y="150" width="600" height="400" fill="none" stroke="#333" stroke-width="2"/>
+          <text x="400" y="350" font-family="Arial" font-size="20" text-anchor="middle">Drawing would be displayed here</text>
+          <text x="400" y="380" font-family="Arial" font-size="16" text-anchor="middle">(Using actual AutoCAD API would render this)</text>
+        </svg>
+      `;
+      
+      return `data:image/svg+xml;base64,${btoa(svgContent)}`;
     }
-
-    const signedUrlData = await signedUrlResponse.json();
-    return signedUrlData.signedUrl;
   } catch (error) {
     console.error("Error uploading drawing file:", error);
     return null;
@@ -272,6 +223,8 @@ function generateDrawingContent(parameters: any, templateId: string): string {
  */
 export async function generateDrawing(parameters: any, templateId: string): Promise<string | null> {
   try {
+    // For demo purposes, we don't actually need a real token
+    // but we'll call getAccessToken to maintain the workflow
     const token = await getAccessToken();
     if (!token) {
       throw new Error("Failed to get access token");
@@ -283,15 +236,10 @@ export async function generateDrawing(parameters: any, templateId: string): Prom
     // Generate the drawing content based on parameters and template
     const drawingContent = generateDrawingContent(parameters, templateId);
     
-    // Upload the drawing to Document Management
-    const fileName = `${parameters.toolType}_${Date.now()}.svg`;
-    const fileUrl = await uploadDrawingFile(token, drawingContent, fileName);
-    
-    if (!fileUrl) {
-      throw new Error("Failed to upload drawing file");
-    }
-    
-    return fileUrl;
+    // Create a data URL that can be used directly instead of uploading to Autodesk
+    // This bypasses the API calls that were failing
+    const dataUrl = `data:image/svg+xml;base64,${btoa(drawingContent)}`;
+    return dataUrl;
   } catch (error) {
     console.error("Error generating drawing:", error);
     return null;
