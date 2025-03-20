@@ -1,3 +1,4 @@
+
 // Types for AutoCAD API responses
 interface AccessTokenResponse {
   access_token: string;
@@ -19,36 +20,54 @@ let tokenCache: {
   expiresAt: number;
 } | null = null;
 
-// Fixed API keys for development purposes
-// In production, you should use a more secure method
-const FIXED_API_KEYS = {
-  clientId: "YourFixedClientId",
-  clientSecret: "YourFixedClientSecret"
-};
-
 /**
  * Get access token for Autodesk APS API
  */
 export async function getAccessToken(): Promise<string | null> {
   try {
-    // For demo purposes, we're using a mock token that will NOT actually call the API
-    // but will still allow the application flow to continue
+    // Check if we have a cached valid token
+    if (tokenCache && tokenCache.expiresAt > Date.now()) {
+      return tokenCache.token;
+    }
     
-    // Simulate a successful authentication without calling the real API
-    const mockResponse: AccessTokenResponse = {
-      access_token: "mock_token_" + Date.now(),
-      token_type: "Bearer",
-      expires_in: 3600
-    };
+    // Get API keys from localStorage
+    const savedKeys = localStorage.getItem("autocadApiKeys");
+    if (!savedKeys) {
+      throw new Error("No API keys found");
+    }
+    
+    const { clientId, clientSecret } = JSON.parse(savedKeys);
+    
+    // Call the actual Autodesk APS authentication endpoint
+    const formData = new URLSearchParams();
+    formData.append('client_id', clientId);
+    formData.append('client_secret', clientSecret);
+    formData.append('grant_type', 'client_credentials');
+    formData.append('scope', 'data:read data:write data:create bucket:read bucket:create');
+    
+    const response = await fetch('https://developer.api.autodesk.com/authentication/v1/authenticate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error ${response.status}: ${errorText}`);
+      throw new Error(`Authentication failed: ${response.status} ${errorText}`);
+    }
+    
+    const tokenData: AccessTokenResponse = await response.json();
     
     // Cache the token
     tokenCache = {
-      token: mockResponse.access_token,
-      expiresAt: Date.now() + (mockResponse.expires_in * 1000) - 60000, // Expire 1 minute early to be safe
+      token: tokenData.access_token,
+      expiresAt: Date.now() + (tokenData.expires_in * 1000) - 60000, // Expire 1 minute early to be safe
     };
     
-    console.log("Using mock token for demo purposes:", mockResponse.access_token);
-    return mockResponse.access_token;
+    return tokenData.access_token;
   } catch (error) {
     console.error("Error getting access token:", error);
     return null;

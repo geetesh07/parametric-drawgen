@@ -9,18 +9,6 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Fixed API keys for production use
-const FIXED_API_KEYS = {
-  clientId: "YourFixedClientId",
-  clientSecret: "YourFixedClientSecret"
-};
-
-// Fixed demo keys
-const DEMO_KEYS = {
-  clientId: "YOUR_DEMO_CLIENT_ID",
-  clientSecret: "YOUR_DEMO_CLIENT_SECRET"
-};
-
 export function ApiKeyForm() {
   // Load keys from localStorage if they exist
   const [keys, setKeys] = useState(() => {
@@ -35,30 +23,7 @@ export function ApiKeyForm() {
     !!localStorage.getItem("autocadApiKeys")
   );
 
-  const [useDemoKeys, setUseDemoKeys] = useState(!isStored);
-  const [useFixedKeys, setUseFixedKeys] = useState(false);
-
-  // Handle demo keys toggle
-  useEffect(() => {
-    if (useDemoKeys) {
-      localStorage.setItem("autocadApiKeys", JSON.stringify(DEMO_KEYS));
-      setKeys(DEMO_KEYS);
-      setIsStored(true);
-      setUseFixedKeys(false);
-      toast.success("Using demo API keys (Note: These won't connect to the real API)");
-    }
-  }, [useDemoKeys]);
-
-  // Handle fixed keys toggle
-  useEffect(() => {
-    if (useFixedKeys) {
-      localStorage.setItem("autocadApiKeys", JSON.stringify(FIXED_API_KEYS));
-      setKeys(FIXED_API_KEYS);
-      setIsStored(true);
-      setUseDemoKeys(false);
-      toast.success("Using fixed API keys");
-    }
-  }, [useFixedKeys]);
+  const [useDemoKeys, setUseDemoKeys] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -79,7 +44,6 @@ export function ApiKeyForm() {
     localStorage.setItem("autocadApiKeys", JSON.stringify(keys));
     setIsStored(true);
     setUseDemoKeys(false);
-    setUseFixedKeys(false);
     toast.success("API keys saved successfully");
   };
 
@@ -88,7 +52,6 @@ export function ApiKeyForm() {
     setKeys({ clientId: "", clientSecret: "" });
     setIsStored(false);
     setUseDemoKeys(false);
-    setUseFixedKeys(false);
     toast.info("API keys cleared");
   };
 
@@ -97,82 +60,56 @@ export function ApiKeyForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Key className="h-5 w-5 text-blue-600" />
-          AutoCAD API Configuration
+          Autodesk APS API Configuration
         </CardTitle>
         <CardDescription>
           Enter your Autodesk APS (formerly Forge) API credentials for drawing generation
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/30">
+        <Alert className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/30">
           <AlertDescription>
-            For this demo application, you can use the options below without needing real API keys.
-            In a production environment, you would use your actual Autodesk APS credentials.
+            To use the actual Autodesk APS API, you need to provide your real APS credentials.
+            You can get these from the <a href="https://aps.autodesk.com/" target="_blank" rel="noopener noreferrer" className="font-medium underline">Autodesk APS Portal</a> after creating an application.
           </AlertDescription>
         </Alert>
 
-        <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/10 p-3 rounded-md">
-          <Switch 
-            id="useFixedKeys" 
-            checked={useFixedKeys} 
-            onCheckedChange={setUseFixedKeys}
-          />
-          <Label htmlFor="useFixedKeys" className="text-green-700 dark:text-green-400">
-            Use fixed API keys (recommended)
+        <div className="space-y-2">
+          <Label htmlFor="clientId" className="text-blue-800 dark:text-blue-400">
+            Client ID
           </Label>
-        </div>
-
-        <div className="flex items-center space-x-2 bg-amber-50 dark:bg-amber-900/10 p-3 rounded-md">
-          <Switch 
-            id="useDemoKeys" 
-            checked={useDemoKeys} 
-            onCheckedChange={setUseDemoKeys}
+          <Input
+            id="clientId"
+            name="clientId"
+            value={keys.clientId}
+            onChange={handleInputChange}
+            className="border-blue-200 dark:border-blue-800/50"
+            placeholder="Enter your APS Client ID"
           />
-          <Label htmlFor="useDemoKeys" className="text-amber-700 dark:text-amber-400">
-            Use demo API keys (for testing only)
-          </Label>
         </div>
-
-        {!useDemoKeys && !useFixedKeys && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="clientId" className="text-blue-800 dark:text-blue-400">
-                Client ID
-              </Label>
-              <Input
-                id="clientId"
-                name="clientId"
-                value={keys.clientId}
-                onChange={handleInputChange}
-                className="border-blue-200 dark:border-blue-800/50"
-                placeholder="Enter your APS Client ID"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="clientSecret" className="text-blue-800 dark:text-blue-400">
-                Client Secret
-              </Label>
-              <Input
-                id="clientSecret"
-                name="clientSecret"
-                type="password"
-                value={keys.clientSecret}
-                onChange={handleInputChange}
-                className="border-blue-200 dark:border-blue-800/50"
-                placeholder="Enter your APS Client Secret"
-              />
-              <p className="text-xs text-muted-foreground">
-                Your credentials are stored locally in your browser and never transmitted to our servers.
-              </p>
-            </div>
-          </>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="clientSecret" className="text-blue-800 dark:text-blue-400">
+            Client Secret
+          </Label>
+          <Input
+            id="clientSecret"
+            name="clientSecret"
+            type="password"
+            value={keys.clientSecret}
+            onChange={handleInputChange}
+            className="border-blue-200 dark:border-blue-800/50"
+            placeholder="Enter your APS Client Secret"
+          />
+          <p className="text-xs text-muted-foreground">
+            Your credentials are stored locally in your browser and never transmitted to our servers.
+          </p>
+        </div>
 
         {isStored && (
           <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-md border border-green-200 dark:border-green-800/30 flex items-center gap-2">
             <Lock className="h-4 w-4 text-green-600" />
             <span className="text-sm text-green-700 dark:text-green-400">
-              {useDemoKeys ? "Using demo API keys" : useFixedKeys ? "Using fixed API keys" : "API keys are stored in your browser"}
+              API keys are saved and will be used for drawing generation
             </span>
           </div>
         )}
@@ -181,20 +118,10 @@ export function ApiKeyForm() {
         <Button variant="outline" onClick={clearApiKeys} disabled={!isStored}>
           Clear Keys
         </Button>
-        {!useDemoKeys && !useFixedKeys ? (
-          <Button onClick={saveApiKeys} className="gap-1">
-            <Save className="h-4 w-4" />
-            Save Keys
-          </Button>
-        ) : (
-          <Button onClick={() => {
-            setUseDemoKeys(false);
-            setUseFixedKeys(false);
-          }} variant="outline" className="gap-1">
-            <RotateCcw className="h-4 w-4" />
-            Use Custom Keys
-          </Button>
-        )}
+        <Button onClick={saveApiKeys} className="gap-1">
+          <Save className="h-4 w-4" />
+          Save Keys
+        </Button>
       </CardFooter>
     </Card>
   );

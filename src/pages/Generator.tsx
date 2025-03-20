@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, InfoIcon, Settings } from "lucide-react";
+import { AlertCircle, InfoIcon, Key, Settings } from "lucide-react";
 import { Toaster } from "sonner";
 import { 
   Dialog,
@@ -36,18 +35,15 @@ const Generator = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  // Check if API keys and template are configured
   useEffect(() => {
     const keys = localStorage.getItem("autocadApiKeys");
     setApiKeysConfigured(!!keys);
     
     const template = localStorage.getItem("selectedTemplate");
     setSelectedTemplate(template);
-  }, [isSettingsOpen]); // Re-check when settings dialog is closed
+  }, [isSettingsOpen]);
   
-  // Validate dimensions whenever parameters change
   useEffect(() => {
-    // Diameter too large relative to length check
     const diameterLengthRatio = parameters.cuttingDiameter / parameters.overallLength;
     if (diameterLengthRatio > 0.3) {
       setValidationError("Warning: Cutting diameter is too large relative to overall length. This may be impractical.");
@@ -78,19 +74,18 @@ const Generator = () => {
               </p>
             </div>
             
-            {/* Quick access to API settings */}
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  API Settings
+                <Button variant="default" className="gap-2">
+                  <Key className="h-4 w-4" />
+                  AutoCAD API Settings
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>AutoCAD API Configuration</DialogTitle>
                   <DialogDescription>
-                    Configure your API keys for AutoCAD integration.
+                    Configure your Autodesk APS API keys for generating drawings.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -101,18 +96,16 @@ const Generator = () => {
           </div>
           
           <div className="space-y-8">
-            {/* API Status Alert */}
             {!apiKeysConfigured && (
-              <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/30">
-                <InfoIcon className="h-5 w-5 text-blue-600" />
+              <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
+                <AlertCircle className="h-5 w-5" />
                 <AlertTitle>AutoCAD API Keys Required</AlertTitle>
                 <AlertDescription>
-                  To generate professional drawings using the AutoCAD API, please configure your API keys using the API Settings button above.
+                  To generate actual drawings using the AutoCAD API, please set up your Autodesk APS API keys using the AutoCAD API Settings button above.
                 </AlertDescription>
               </Alert>
             )}
             
-            {/* Template Status Alert */}
             {(apiKeysConfigured && !selectedTemplate) && (
               <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800/30">
                 <InfoIcon className="h-5 w-5 text-yellow-600" />
@@ -123,7 +116,6 @@ const Generator = () => {
               </Alert>
             )}
             
-            {/* Parameters Form */}
             <div className="grid grid-cols-1 gap-6">
               <ParametricForm 
                 parameters={parameters} 
@@ -133,7 +125,6 @@ const Generator = () => {
               />
             </div>
             
-            {/* Validation Warning */}
             {validationError && (
               <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
                 <AlertCircle className="h-5 w-5" />
@@ -142,7 +133,6 @@ const Generator = () => {
               </Alert>
             )}
             
-            {/* Multi-view Drawing Preview */}
             <div className="grid grid-cols-1 gap-6">
               <DrawingPreview 
                 parameters={parameters} 
