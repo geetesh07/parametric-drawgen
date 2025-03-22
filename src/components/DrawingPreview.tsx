@@ -6,7 +6,7 @@ import { Download, ZoomIn, ZoomOut, RotateCw, Square, Maximize2, Ruler, Scan, Fi
 import { type ToolParameters } from "./parametric-form/ParametricForm";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { generateDrawing, generatePDF, exportAsPNG } from "@/services/autocadService";
+import { generateDrawing, generatePDF, exportAsPNG } from "@/services/drawingService";
 
 export interface DrawingPreviewProps {
   parameters: ToolParameters;
@@ -22,8 +22,9 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
   const [activeTab, setActiveTab] = useState("front-view");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [exportLoading, setExportLoading] = useState(false);
-  const [autocadDrawingUrl, setAutocadDrawingUrl] = useState<string | null>(null);
+  const [svgDrawingUrl, setSvgDrawingUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [lastImgRender, setLastImgRender] = useState<string>("");
 
   useEffect(() => {
     renderFrontView();
@@ -31,6 +32,11 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     renderTopView();
     renderIsometricView();
   }, [parameters, zoomLevel]);
+
+  useEffect(() => {
+    // Generate SVG drawing automatically when parameters or template change
+    handleGenerateDrawing();
+  }, [parameters, templateId]);
 
   const renderFrontView = () => {
     if (!frontViewCanvasRef.current) return;
@@ -447,22 +453,16 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     link.click();
   };
 
-  const handleExportWithAutocad = async () => {
-    const apiKeysExist = localStorage.getItem("autocadApiKeys");
-    if (!apiKeysExist) {
-      toast.error("Please configure your AutoCAD API keys first");
-      return;
-    }
-    
+  const handleGenerateDrawing = async () => {
     setIsGenerating(true);
-    setExportLoading(true);
     
     try {
       const drawingUrl = await generateDrawing(parameters, templateId);
       
       if (drawingUrl) {
-        setAutocadDrawingUrl(drawingUrl);
-        toast.success("Drawing generated successfully with AutoCAD API");
+        setSvgDrawingUrl(drawingUrl);
+        setLastImgRender(new Date().toISOString()); // Force re-render when new drawing is generated
+        toast.success("Technical drawing generated successfully");
       } else {
         toast.error("Failed to generate drawing");
       }
@@ -471,12 +471,11 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
       toast.error("Error generating drawing. Check console for details.");
     } finally {
       setIsGenerating(false);
-      setExportLoading(false);
     }
   };
 
-  const handleExportPDFWithAutocad = async () => {
-    if (!autocadDrawingUrl) {
+  const handleExportPDF = async () => {
+    if (!svgDrawingUrl) {
       toast.error("Please generate a drawing first");
       return;
     }
@@ -484,12 +483,12 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     setExportLoading(true);
     
     try {
-      const pdfUrl = await generatePDF(autocadDrawingUrl);
+      const pdfUrl = await generatePDF(svgDrawingUrl);
       
       if (pdfUrl) {
         const link = document.createElement('a');
         link.href = pdfUrl;
-        link.download = `${parameters.toolType}-autocad.pdf`;
+        link.download = `${parameters.toolType}-technical-drawing.pdf`;
         link.click();
         
         toast.success("PDF generated and downloaded successfully");
@@ -504,8 +503,8 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     }
   };
 
-  const handleExportPNGWithAutocad = async () => {
-    if (!autocadDrawingUrl) {
+  const handleExportPNG = async () => {
+    if (!svgDrawingUrl) {
       toast.error("Please generate a drawing first");
       return;
     }
@@ -513,12 +512,12 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     setExportLoading(true);
     
     try {
-      const pngUrl = await exportAsPNG(autocadDrawingUrl);
+      const pngUrl = await exportAsPNG(svgDrawingUrl);
       
       if (pngUrl) {
         const link = document.createElement('a');
         link.href = pngUrl;
-        link.download = `${parameters.toolType}-autocad.png`;
+        link.download = `${parameters.toolType}-technical-drawing.png`;
         link.click();
         
         toast.success("PNG generated and downloaded successfully");
@@ -566,38 +565,39 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">PNG</span>
+                <span className="hidden sm:inline">Canvas PNG</span>
               </Button>
               <Button 
-                variant="outline" 
+                variant="default" 
                 size="sm" 
-                onClick={handleExportWithAutocad}
-                disabled={isGenerating || exportLoading}
+                onClick={handleGenerateDrawing}
+                disabled={isGenerating}
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 <FileText className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Generate with AutoCAD</span>
+                <span className="hidden sm:inline">Generate Technical Drawing</span>
               </Button>
               
-              {autocadDrawingUrl && (
+              {svgDrawingUrl && (
                 <>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleExportPDFWithAutocad}
+                    onClick={handleExportPDF}
                     disabled={exportLoading}
                   >
                     <FileText className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">AutoCAD PDF</span>
+                    <span className="hidden sm:inline">Export PDF</span>
                   </Button>
                   
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleExportPNGWithAutocad}
+                    onClick={handleExportPNG}
                     disabled={exportLoading}
                   >
                     <FileText className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">AutoCAD PNG</span>
+                    <span className="hidden sm:inline">Export PNG</span>
                   </Button>
                 </>
               )}
@@ -669,20 +669,27 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
             </TabsContent>
           </Tabs>
           
-          {isGenerating && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30 flex items-center justify-center">
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <p className="text-blue-800 dark:text-blue-400">Generating drawing with AutoCAD API...</p>
+          {/* SVG Technical Drawing Display */}
+          {svgDrawingUrl && (
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-lg font-medium text-blue-800 dark:text-blue-400 mb-4">Technical Drawing with Precise Dimensioning</h3>
+              <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 p-4">
+                <img 
+                  src={svgDrawingUrl} 
+                  alt="Technical Drawing" 
+                  className="w-full h-auto max-h-[600px] object-contain" 
+                  key={lastImgRender} // Force re-render when drawing changes
+                />
               </div>
             </div>
           )}
           
-          {autocadDrawingUrl && !isGenerating && (
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800/30">
-              <p className="text-sm text-green-800 dark:text-green-400">
-                AutoCAD drawing generated successfully. You can now export to PDF or PNG.
-              </p>
+          {isGenerating && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30 flex items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <p className="text-blue-800 dark:text-blue-400">Generating technical drawing...</p>
+              </div>
             </div>
           )}
           

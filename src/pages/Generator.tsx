@@ -5,18 +5,8 @@ import { Footer } from "@/components/Footer";
 import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, InfoIcon, Key, Settings } from "lucide-react";
+import { AlertCircle, InfoIcon } from "lucide-react";
 import { Toaster } from "sonner";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ApiKeyForm } from "@/components/autocad/ApiKeyForm";
-import { Button } from "@/components/ui/button";
 
 const Generator = () => {
   const [parameters, setParameters] = useState<ToolParameters>({
@@ -32,17 +22,12 @@ const Generator = () => {
   });
   
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [apiKeysConfigured, setApiKeysConfigured] = useState<boolean>(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   useEffect(() => {
-    const keys = localStorage.getItem("autocadApiKeys");
-    setApiKeysConfigured(!!keys);
-    
     const template = localStorage.getItem("selectedTemplate");
     setSelectedTemplate(template);
-  }, [isSettingsOpen]);
+  }, []);
   
   useEffect(() => {
     const diameterLengthRatio = parameters.cuttingDiameter / parameters.overallLength;
@@ -67,47 +52,15 @@ const Generator = () => {
       <Navbar />
       <main className="flex-1 pt-24 pb-16">
         <div className="container max-w-6xl mx-auto px-4">
-          <div className="mb-8 flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="text-3xl font-bold mb-2 text-gradient">Parametric Drawing Generator</h1>
-              <p className="text-muted-foreground">
-                Enter tool specifications to generate a precision manufacturing drawing.
-              </p>
-            </div>
-            
-            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                  <Key className="h-5 w-5" />
-                  Configure AutoCAD API Keys
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>AutoCAD API Configuration</DialogTitle>
-                  <DialogDescription>
-                    Configure your Autodesk APS API keys for generating drawings.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <ApiKeyForm />
-                </div>
-              </DialogContent>
-            </Dialog>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2 text-gradient">Parametric Drawing Generator</h1>
+            <p className="text-muted-foreground">
+              Enter tool specifications to generate a precision manufacturing drawing.
+            </p>
           </div>
           
           <div className="space-y-8">
-            {!apiKeysConfigured && (
-              <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
-                <AlertCircle className="h-5 w-5" />
-                <AlertTitle>AutoCAD API Keys Required</AlertTitle>
-                <AlertDescription>
-                  To generate actual drawings using the AutoCAD API, please set up your Autodesk APS API keys using the Configure AutoCAD API Keys button above.
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {(apiKeysConfigured && !selectedTemplate) && (
+            {!selectedTemplate && (
               <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800/30">
                 <InfoIcon className="h-5 w-5 text-yellow-600" />
                 <AlertTitle>Drawing Template Required</AlertTitle>
