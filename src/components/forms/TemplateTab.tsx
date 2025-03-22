@@ -76,7 +76,7 @@ export function TemplateTab() {
                   />
                   {selectedTemplate === template.id && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="primary" className="flex items-center gap-1">
+                      <Badge variant="default" className="flex items-center gap-1">
                         <CheckCircle className="h-3 w-3" /> Selected
                       </Badge>
                     </div>
