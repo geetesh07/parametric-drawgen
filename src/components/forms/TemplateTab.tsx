@@ -3,42 +3,45 @@ import { CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ApiKeyForm } from "@/components/autocad/ApiKeyForm";
-import { TemplateSelector } from "@/components/autocad/TemplateSelector";
 
 export function TemplateTab() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("settings");
+  const [activeTab, setActiveTab] = useState("templates");
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
+    localStorage.setItem("selectedTemplate", templateId);
   };
 
   return (
     <CardContent className="p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full mb-4">
-          <TabsTrigger value="settings">API Settings</TabsTrigger>
+        <TabsList className="grid grid-cols-1 w-full mb-4">
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="settings" className="space-y-4">
-          <ApiKeyForm />
-          
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">About AutoCAD Integration</h3>
-            <p className="text-sm text-muted-foreground">
-              The Autodesk APS (formerly Forge) integration allows you to generate professional-grade 
-              CAD drawings based on your tool parameters. Enter your API credentials to get started.
-            </p>
-          </div>
-        </TabsContent>
-        
         <TabsContent value="templates" className="space-y-4">
-          <TemplateSelector 
-            onTemplateSelect={handleTemplateSelect}
-            selectedTemplate={selectedTemplate}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {["template-endmill", "template-drill", "template-reamer"].map((templateId) => (
+              <div 
+                key={templateId}
+                className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                  selectedTemplate === templateId 
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                    : "border-gray-200 hover:border-blue-300 dark:border-gray-700"
+                }`}
+                onClick={() => handleTemplateSelect(templateId)}
+              >
+                <h3 className="text-sm font-medium mb-2">
+                  {templateId.replace("template-", "").charAt(0).toUpperCase() + 
+                   templateId.replace("template-", "").slice(1)}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Standard technical drawing template for {templateId.replace("template-", "")} tools
+                </p>
+              </div>
+            ))}
+          </div>
           
           <Separator className="my-4" />
           
