@@ -5,6 +5,8 @@ import { FileText } from "lucide-react";
 import { type ToolParameters } from "./parametric-form/ParametricForm";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 export interface DrawingPreviewProps {
   parameters: ToolParameters;
@@ -25,9 +27,12 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    drawGridBackground(ctx, canvas.width, canvas.height);
+    // Set white background
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const margin = 50;
     const maxWidth = canvas.width - margin * 2;
@@ -37,8 +42,8 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const startX = (canvas.width - parameters.overallLength * scale) / 2;
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "#8A898C"; // Standard neutral gray
-    ctx.fillStyle = "#F0F0F0"; // Light neutral background for tool
+    ctx.strokeStyle = "#333333"; // Dark gray for tool outline
+    ctx.fillStyle = "#EEEEEE"; // Light gray for tool body
     ctx.font = "12px 'Inter', sans-serif";
     ctx.textAlign = "center";
     
@@ -51,39 +56,80 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     const fluteEndX = shankEndX + parameters.fluteLength * scale;
     const fluteRadius = parameters.cuttingDiameter * scale / 2;
     
+    // Draw tool shape based on tool type
     ctx.moveTo(shankStartX, centerY - shankRadius);
     ctx.lineTo(shankEndX, centerY - shankRadius);
     
-    if (parameters.toolType === "drill" || parameters.toolType === "endmill") {
-      ctx.lineTo(fluteEndX - fluteRadius, centerY - fluteRadius);
+    if (parameters.toolType === "drill") {
+      // Calculate point length based on point angle
+      const pointAngle = parameters.pointAngle;
+      const pointLength = (parameters.cuttingDiameter / 2) / Math.tan((pointAngle / 2) * (Math.PI / 180)) * scale;
+      
+      // Draw drill with point
+      ctx.lineTo(fluteEndX - pointLength, centerY - fluteRadius);
       ctx.lineTo(fluteEndX, centerY);
+      ctx.lineTo(fluteEndX - pointLength, centerY + fluteRadius);
+      
+      // Add point angle dimensioning
+      drawPointAngle(ctx, fluteEndX, centerY, fluteRadius, pointLength, pointAngle);
+    } else if (parameters.toolType === "endmill") {
+      // Draw end mill with flat end
+      ctx.lineTo(fluteEndX - fluteRadius, centerY - fluteRadius);
+      ctx.lineTo(fluteEndX, centerY - fluteRadius);
+      ctx.lineTo(fluteEndX, centerY + fluteRadius);
       ctx.lineTo(fluteEndX - fluteRadius, centerY + fluteRadius);
     } else {
+      // Default for reamer and other tools
       ctx.lineTo(fluteEndX, centerY - fluteRadius);
       ctx.lineTo(fluteEndX, centerY + fluteRadius);
     }
     
+    // Complete the tool shape
     ctx.lineTo(shankEndX, centerY + shankRadius);
     ctx.lineTo(shankStartX, centerY + shankRadius);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
     
-    drawDimensionLine(ctx, shankStartX, centerY + 40, fluteEndX, centerY + 40, `${parameters.overallLength.toFixed(2)} mm`);
-    drawDimensionLine(ctx, shankStartX, centerY + 70, shankEndX, centerY + 70, `${parameters.shankLength.toFixed(2)} mm`);
-    drawDimensionLine(ctx, shankEndX, centerY + 100, fluteEndX, centerY + 100, `${parameters.fluteLength.toFixed(2)} mm`);
+    // Draw dimension lines
+    drawDimensionLine(ctx, shankStartX, centerY + 40, fluteEndX, centerY + 40, `${parameters.overallLength.toFixed(3)} mm`);
+    drawDimensionLine(ctx, shankStartX, centerY + 70, shankEndX, centerY + 70, `${parameters.shankLength.toFixed(3)} mm`);
+    drawDimensionLine(ctx, shankEndX, centerY + 100, fluteEndX, centerY + 100, `${parameters.fluteLength.toFixed(3)} mm`);
     
-    drawDiameterDimension(ctx, shankStartX + parameters.shankLength * scale * 0.2, centerY, shankRadius, `Ø${parameters.shankDiameter.toFixed(3)}`);
-    drawDiameterDimension(ctx, fluteEndX - parameters.fluteLength * scale * 0.3, centerY, fluteRadius, `Ø${parameters.cuttingDiameter.toFixed(3)}`);
+    // Draw diameter dimensions with tolerances
+    // Shank diameter with tolerance
+    let shankTolerance = "±0.005";
+    let cuttingTolerance = "±0.010";
     
-    ctx.fillStyle = "#333333"; // Darker neutral gray for text
-    ctx.font = "14px 'Inter', sans-serif";
+    if (parameters.toolType === "drill" || parameters.toolType === "endmill") {
+      cuttingTolerance = "+0.000/-0.003";
+    }
+    
+    drawDiameterDimension(
+      ctx, 
+      shankStartX + parameters.shankLength * scale * 0.2, 
+      centerY, 
+      shankRadius, 
+      `Ø${parameters.shankDiameter.toFixed(3)} ${shankTolerance}`
+    );
+    
+    drawDiameterDimension(
+      ctx, 
+      fluteEndX - parameters.fluteLength * scale * 0.3, 
+      centerY, 
+      fluteRadius, 
+      `Ø${parameters.cuttingDiameter.toFixed(3)} ${cuttingTolerance}`
+    );
+    
+    // Draw title and info
+    ctx.fillStyle = "#333333";
+    ctx.font = "16px 'Inter', sans-serif";
     ctx.fillText(`${parameters.toolType.toUpperCase()} - ${parameters.coating}`, canvas.width / 2, 30);
     
+    // Add back taper info if present
     if (parameters.backTaper > 0) {
-      ctx.fillStyle = "#6b7280";
+      ctx.fillStyle = "#333333";
       ctx.font = "12px 'Inter', sans-serif";
-      
       const taperLabelX = shankEndX + parameters.fluteLength * scale * 0.5;
       const taperLabelY = centerY - Math.max(fluteRadius, shankRadius) * 3;
       
@@ -96,6 +142,28 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     }
   };
 
+  const drawPointAngle = (
+    ctx: CanvasRenderingContext2D,
+    tipX: number,
+    centerY: number,
+    radius: number,
+    pointLength: number,
+    pointAngle: number
+  ) => {
+    ctx.strokeStyle = "#555555";
+    ctx.fillStyle = "#333333";
+    ctx.lineWidth = 0.5;
+    
+    // Draw angle arcs
+    ctx.beginPath();
+    ctx.arc(tipX, centerY, 30, Math.PI * 1.5, Math.PI * 0.5, false);
+    ctx.stroke();
+    
+    // Draw point angle text
+    ctx.font = "12px 'Inter', sans-serif";
+    ctx.fillText(`${pointAngle}°`, tipX - 40, centerY);
+  };
+
   const drawDimensionLine = (
     ctx: CanvasRenderingContext2D, 
     fromX: number, 
@@ -104,18 +172,21 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     toY: number, 
     text: string
   ) => {
-    ctx.strokeStyle = "#6b7280"; // Neutral gray
-    ctx.fillStyle = "#444444"; // Darker neutral gray
+    ctx.strokeStyle = "#555555";
+    ctx.fillStyle = "#333333";
     ctx.lineWidth = 1;
     
+    // Draw main dimension line
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, fromY);
     ctx.stroke();
     
+    // Draw arrows
     drawArrow(ctx, fromX, fromY, fromX + 10, fromY);
     drawArrow(ctx, toX, fromY, toX - 10, fromY);
     
+    // Draw extension lines
     ctx.beginPath();
     ctx.moveTo(fromX, fromY - 5);
     ctx.lineTo(fromX, fromY + 5);
@@ -123,20 +194,21 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.lineTo(toX, fromY + 5);
     ctx.stroke();
     
+    // Draw dimension text
     const textWidth = ctx.measureText(text).width;
     const padding = 4;
     
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(
       (fromX + toX) / 2 - textWidth / 2 - padding, 
-      fromY + 5, 
+      fromY - 8, 
       textWidth + padding * 2, 
-      20
+      16
     );
     
-    ctx.fillStyle = "#444444"; // Darker neutral gray
+    ctx.fillStyle = "#333333";
     ctx.font = "12px 'Inter', sans-serif";
-    ctx.fillText(text, (fromX + toX) / 2, fromY + 18);
+    ctx.fillText(text, (fromX + toX) / 2, fromY + 4);
   };
 
   const drawDiameterDimension = (
@@ -146,35 +218,44 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     radius: number,
     text: string
   ) => {
-    ctx.strokeStyle = "#6b7280"; // Neutral gray
-    ctx.fillStyle = "#444444"; // Darker neutral gray
+    ctx.strokeStyle = "#555555";
+    ctx.fillStyle = "#333333";
     ctx.lineWidth = 1;
     
+    // Draw dimension line
     ctx.beginPath();
     ctx.moveTo(x, y - radius - 10);
     ctx.lineTo(x, y + radius + 10);
     ctx.stroke();
     
+    // Draw arrows
     drawArrow(ctx, x, y - radius, x, y - radius + 10);
     drawArrow(ctx, x, y + radius, x, y + radius - 10);
     
+    // Draw dimension text
     const textWidth = ctx.measureText(text).width;
     const padding = 4;
     
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(
       x - textWidth / 2 - padding, 
       y - radius - 25, 
       textWidth + padding * 2, 
-      20
+      16
     );
     
-    ctx.fillStyle = "#444444"; // Darker neutral gray
+    ctx.fillStyle = "#333333";
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, x, y - radius - 15);
   };
 
-  const drawArrow = (ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) => {
+  const drawArrow = (
+    ctx: CanvasRenderingContext2D, 
+    fromX: number, 
+    fromY: number, 
+    toX: number, 
+    toY: number
+  ) => {
     const headLength = 10;
     const dx = toX - fromX;
     const dy = toY - fromY;
@@ -188,30 +269,6 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
     ctx.stroke();
   };
 
-  const drawGridBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    ctx.fillStyle = "#f8fafc";
-    ctx.fillRect(0, 0, width, height);
-    
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 1;
-    
-    const gridSize = 20;
-    
-    for (let x = 0; x <= width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    
-    for (let y = 0; y <= height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-  };
-
   const handleExportPDF = async () => {
     setExportLoading(true);
     
@@ -221,26 +278,49 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
         throw new Error("Canvas not available");
       }
       
-      // Create a simple PDF export using canvas data URL
-      const dataUrl = canvas.toDataURL('image/png');
+      // Create a high-quality PDF with jsPDF
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
       
-      // Create a temporary link to download the PDF (as image for now)
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `${parameters.toolType}-drawing.png`;
-      link.click();
+      // Create new PDF document
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
       
-      toast.success("Drawing exported successfully");
+      // PDF dimensions
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculate the scaling for high quality
+      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+      const scaledWidth = canvas.width * ratio * 0.9; // 90% of available space
+      const scaledHeight = canvas.height * ratio * 0.9;
+      const xOffset = (pdfWidth - scaledWidth) / 2;
+      const yOffset = (pdfHeight - scaledHeight) / 2;
+      
+      // Add the image to the PDF
+      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, scaledWidth, scaledHeight);
+      
+      // Add title and metadata
+      pdf.setFontSize(10);
+      pdf.text(`${parameters.toolType.toUpperCase()} - Technical Drawing`, pdfWidth / 2, 10, { align: 'center' });
+      pdf.text(`Created on ${new Date().toLocaleDateString()}`, pdfWidth / 2, pdfHeight - 5, { align: 'center' });
+      
+      // Download the PDF
+      pdf.save(`${parameters.toolType}-technical-drawing.pdf`);
+      
+      toast.success("PDF exported successfully");
     } catch (error) {
-      console.error("Error exporting drawing:", error);
-      toast.error("Error exporting drawing. Check console for details.");
+      console.error("Error exporting PDF:", error);
+      toast.error("Error exporting PDF. Check console for details.");
     } finally {
       setExportLoading(false);
     }
   };
 
   return (
-    <Card className="w-full shadow-lg border-2 border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950/30">
+    <Card className="w-full shadow-lg border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
       <CardContent className="p-6">
         <div className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2">
@@ -253,13 +333,13 @@ export function DrawingPreview({ parameters }: DrawingPreviewProps) {
                 disabled={exportLoading}
               >
                 <FileText className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Export Drawing</span>
+                <span className="hidden sm:inline">Export as PDF</span>
               </Button>
             </div>
           </div>
 
           <div className="pt-4">
-            <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+            <div className="overflow-hidden bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800">
               <canvas 
                 ref={frontViewCanvasRef} 
                 width={800} 

@@ -19,6 +19,9 @@ const Generator = () => {
     pointAngle: 140,
     coating: "TiAlN",
     backTaper: 0.063,
+    // Add default tolerances
+    shankDiameterTolerance: "±0.005",
+    cuttingDiameterTolerance: "±0.010",
   });
   
   const [validationError, setValidationError] = useState<string | null>(null);

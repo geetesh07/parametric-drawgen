@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ParametersTab } from "../forms/ParametersTab";
 
 export type ToolParameters = {
@@ -14,6 +13,9 @@ export type ToolParameters = {
   pointAngle: number;
   coating: string;
   backTaper: number;
+  // Add tolerancing properties
+  shankDiameterTolerance: string;
+  cuttingDiameterTolerance: string;
 };
 
 interface ParametricFormProps {
