@@ -88,19 +88,19 @@ function generateDrawingContent(parameters: ToolParameters, templateId: string):
     }
     
     // Add dimensions with precise measurements
-    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#444444');
     
     // Add diameter dimensions
-    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#444444');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#444444');
     
     // Add coating and back taper details
-    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 40}" font-family="Arial" font-size="14" text-anchor="middle" fill="#1e3a8a">Coating: ${coating}</text>`;
+    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 40}" font-family="Arial" font-size="14" text-anchor="middle" fill="#444444">Coating: ${coating}</text>`;
     
     if (backTaper > 0) {
-      toolSvg += `<text x="${startX + shankLengthScaled + fluteLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 60}" font-family="Arial" font-size="14" text-anchor="middle" fill="#1e3a8a">Back Taper: ${backTaper.toFixed(3)} mm</text>`;
+      toolSvg += `<text x="${startX + shankLengthScaled + fluteLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 60}" font-family="Arial" font-size="14" text-anchor="middle" fill="#444444">Back Taper: ${backTaper.toFixed(3)} mm</text>`;
     }
   } else if (toolType === 'drill') {
     // Draw drill shape
@@ -120,17 +120,17 @@ function generateDrawingContent(parameters: ToolParameters, templateId: string):
     toolSvg += `<polygon points="${startX + shankLengthScaled + fluteLengthScaled - pointLength},${yCenter - cuttingWidth/2} ${startX + shankLengthScaled + fluteLengthScaled},${yCenter} ${startX + shankLengthScaled + fluteLengthScaled - pointLength},${yCenter + cuttingWidth/2}" fill="#999999" stroke="black" stroke-width="1" />`;
     
     // Add dimensions with precise measurements
-    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#444444');
     
     // Add diameter dimensions
-    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2 - pointLength/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#444444');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2 - pointLength/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#444444');
     
     // Add point angle and coating details
-    toolSvg += `<text x="${startX + shankLengthScaled + fluteLengthScaled - pointLength/2}" y="${yCenter - cuttingWidth/2 - 30}" font-family="Arial" font-size="14" text-anchor="middle" fill="#1e3a8a">Point Angle: ${pointAngle}°</text>`;
-    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 50}" font-family="Arial" font-size="14" text-anchor="middle" fill="#1e3a8a">Coating: ${coating}</text>`;
+    toolSvg += `<text x="${startX + shankLengthScaled + fluteLengthScaled - pointLength/2}" y="${yCenter - cuttingWidth/2 - 30}" font-family="Arial" font-size="14" text-anchor="middle" fill="#444444">Point Angle: ${pointAngle}°</text>`;
+    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 50}" font-family="Arial" font-size="14" text-anchor="middle" fill="#444444">Coating: ${coating}</text>`;
   } else {
     // Draw reamer or other tool types
     const yCenter = height / 2;
@@ -161,16 +161,16 @@ function generateDrawingContent(parameters: ToolParameters, templateId: string):
     }
     
     // Add dimensions with precise measurements
-    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 20, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 20, `${overallLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX, yCenter + shankWidth + 50, startX + shankLengthScaled, yCenter + shankWidth + 50, `${shankLength.toFixed(3)} mm`, '#444444');
+    toolSvg += addDimension(startX + shankLengthScaled, yCenter + shankWidth + 80, startX + shankLengthScaled + fluteLengthScaled, yCenter + shankWidth + 80, `${fluteLength.toFixed(3)} mm`, '#444444');
     
     // Add diameter dimensions
-    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#1e3a8a');
-    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#1e3a8a');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled/2, yCenter, shankWidth/2, `Ø${shankDiameter.toFixed(3)} mm`, '#444444');
+    toolSvg += addDiameterDimension(startX + shankLengthScaled + fluteLengthScaled/2, yCenter, cuttingWidth/2, `Ø${cuttingDiameter.toFixed(3)} mm`, '#444444');
     
     // Add coating details
-    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 40}" font-family="Arial" font-size="14" text-anchor="middle" fill="#1e3a8a">Coating: ${coating}</text>`;
+    toolSvg += `<text x="${startX + overallLengthScaled/2}" y="${yCenter - Math.max(shankWidth, cuttingWidth)/2 - 40}" font-family="Arial" font-size="14" text-anchor="middle" fill="#444444">Coating: ${coating}</text>`;
   }
   
   // Complete SVG document with proper styling, grid background, and technical drawing look
@@ -186,7 +186,7 @@ function generateDrawingContent(parameters: ToolParameters, templateId: string):
     </defs>
     <rect width="100%" height="100%" fill="white"/>
     <rect width="100%" height="100%" fill="url(#grid)" />
-    <text x="10" y="30" font-family="Arial" font-size="20" font-weight="bold" fill="#1e40af">${toolType.toUpperCase()} - Technical Drawing</text>
+    <text x="10" y="30" font-family="Arial" font-size="20" font-weight="bold" fill="#333333">${toolType.toUpperCase()} - Technical Drawing</text>
     <text x="10" y="50" font-family="Arial" font-size="14" fill="#4b5563">Template: ${templateId}</text>
     ${toolSvg}
     <text x="${width - 10}" y="${height - 10}" font-family="Arial" font-size="10" text-anchor="end" fill="#6b7280">Precision Drawing Generator - Scale 2:1</text>
