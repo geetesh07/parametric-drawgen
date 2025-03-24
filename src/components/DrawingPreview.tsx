@@ -1,36 +1,22 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ZoomIn, ZoomOut, RotateCw, Square, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { type ToolParameters } from "./parametric-form/ParametricForm";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { generateDrawing, generatePDF } from "@/services/drawingService";
 
 export interface DrawingPreviewProps {
   parameters: ToolParameters;
-  templateId: string;
 }
 
-export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) {
+export function DrawingPreview({ parameters }: DrawingPreviewProps) {
   const frontViewCanvasRef = useRef<HTMLCanvasElement>(null);
-  
-  const [activeTab, setActiveTab] = useState("front-view");
-  const [zoomLevel, setZoomLevel] = useState(1);
   const [exportLoading, setExportLoading] = useState(false);
-  const [svgDrawingUrl, setSvgDrawingUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [lastImgRender, setLastImgRender] = useState<string>("");
 
   useEffect(() => {
     renderFrontView();
-  }, [parameters, zoomLevel]);
-
-  useEffect(() => {
-    // Generate SVG drawing automatically when parameters or template change
-    handleGenerateDrawing();
-  }, [parameters, templateId]);
+  }, [parameters]);
 
   const renderFrontView = () => {
     if (!frontViewCanvasRef.current) return;
@@ -45,13 +31,13 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
 
     const margin = 50;
     const maxWidth = canvas.width - margin * 2;
-    const scale = (maxWidth / parameters.overallLength) * zoomLevel;
+    const scale = maxWidth / parameters.overallLength;
     
     const centerY = canvas.height / 2;
     const startX = (canvas.width - parameters.overallLength * scale) / 2;
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "#8A898C"; // Changed from blue to standard neutral gray
+    ctx.strokeStyle = "#8A898C"; // Standard neutral gray
     ctx.fillStyle = "#F0F0F0"; // Light neutral background for tool
     ctx.font = "12px 'Inter', sans-serif";
     ctx.textAlign = "center";
@@ -148,7 +134,7 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
       20
     );
     
-    ctx.fillStyle = "#444444"; // Changed from blue to darker neutral gray
+    ctx.fillStyle = "#444444"; // Darker neutral gray
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, (fromX + toX) / 2, fromY + 18);
   };
@@ -183,7 +169,7 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
       20
     );
     
-    ctx.fillStyle = "#444444"; // Changed from blue to darker neutral gray
+    ctx.fillStyle = "#444444"; // Darker neutral gray
     ctx.font = "12px 'Inter', sans-serif";
     ctx.fillText(text, x, y - radius - 15);
   };
@@ -226,66 +212,31 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
     }
   };
 
-  const handleGenerateDrawing = async () => {
-    setIsGenerating(true);
-    
-    try {
-      const drawingUrl = await generateDrawing(parameters, templateId);
-      
-      if (drawingUrl) {
-        setSvgDrawingUrl(drawingUrl);
-        setLastImgRender(new Date().toISOString()); // Force re-render when new drawing is generated
-        toast.success("Technical drawing generated successfully");
-      } else {
-        toast.error("Failed to generate drawing");
-      }
-    } catch (error) {
-      console.error("Error generating drawing:", error);
-      toast.error("Error generating drawing. Check console for details.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handleExportPDF = async () => {
-    if (!svgDrawingUrl) {
-      toast.error("Please generate a drawing first");
-      return;
-    }
-    
     setExportLoading(true);
     
     try {
-      const pdfUrl = await generatePDF(svgDrawingUrl);
-      
-      if (pdfUrl) {
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = `${parameters.toolType}-technical-drawing.pdf`;
-        link.click();
-        
-        toast.success("PDF generated and downloaded successfully");
-      } else {
-        toast.error("Failed to generate PDF");
+      const canvas = frontViewCanvasRef.current;
+      if (!canvas) {
+        throw new Error("Canvas not available");
       }
+      
+      // Create a simple PDF export using canvas data URL
+      const dataUrl = canvas.toDataURL('image/png');
+      
+      // Create a temporary link to download the PDF (as image for now)
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${parameters.toolType}-drawing.png`;
+      link.click();
+      
+      toast.success("Drawing exported successfully");
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Error generating PDF. Check console for details.");
+      console.error("Error exporting drawing:", error);
+      toast.error("Error exporting drawing. Check console for details.");
     } finally {
       setExportLoading(false);
     }
-  };
-
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 2));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.6));
-  };
-
-  const handleReset = () => {
-    setZoomLevel(1);
   };
 
   return (
@@ -295,40 +246,15 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
           <div className="flex flex-wrap justify-between items-center gap-2">
             <h3 className="text-lg font-medium text-gray-800 dark:text-gray-300">Technical Drawing</h3>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>
-                <ZoomIn className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Zoom In</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>
-                <ZoomOut className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Zoom Out</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleReset}>
-                <RotateCw className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Reset</span>
-              </Button>
               <Button 
-                variant="default" 
+                variant="outline" 
                 size="sm" 
-                onClick={handleGenerateDrawing}
-                disabled={isGenerating}
-                className="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600"
+                onClick={handleExportPDF}
+                disabled={exportLoading}
               >
                 <FileText className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Generate Technical Drawing</span>
+                <span className="hidden sm:inline">Export Drawing</span>
               </Button>
-              
-              {svgDrawingUrl && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleExportPDF}
-                  disabled={exportLoading}
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Export PDF</span>
-                </Button>
-              )}
             </div>
           </div>
 
@@ -342,30 +268,6 @@ export function DrawingPreview({ parameters, templateId }: DrawingPreviewProps) 
               />
             </div>
           </div>
-          
-          {/* SVG Technical Drawing Display */}
-          {svgDrawingUrl && (
-            <div className="mt-8 border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-800 dark:text-gray-300 mb-4">Technical Drawing with Precise Dimensioning</h3>
-              <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 p-4">
-                <img 
-                  src={svgDrawingUrl} 
-                  alt="Technical Drawing" 
-                  className="w-full h-auto max-h-[600px] object-contain" 
-                  key={lastImgRender} // Force re-render when drawing changes
-                />
-              </div>
-            </div>
-          )}
-          
-          {isGenerating && (
-            <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-800/30 flex items-center justify-center">
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                <p className="text-gray-800 dark:text-gray-300">Generating technical drawing...</p>
-              </div>
-            </div>
-          )}
           
           <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-800/30">
             <h4 className="text-sm font-medium text-gray-800 dark:text-gray-300 mb-2">Drawing Details</h4>

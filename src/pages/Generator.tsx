@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { ParametricForm, type ToolParameters } from "@/components/parametric-form/ParametricForm";
 import { DrawingPreview } from "@/components/DrawingPreview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, InfoIcon } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Toaster } from "sonner";
 
 const Generator = () => {
@@ -22,12 +22,6 @@ const Generator = () => {
   });
   
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const template = localStorage.getItem("selectedTemplate");
-    setSelectedTemplate(template);
-  }, []);
   
   useEffect(() => {
     const diameterLengthRatio = parameters.cuttingDiameter / parameters.overallLength;
@@ -40,11 +34,6 @@ const Generator = () => {
 
   const handleParameterChange = (updatedParams: ToolParameters) => {
     setParameters(updatedParams);
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplate(templateId);
-    localStorage.setItem("selectedTemplate", templateId);
   };
 
   return (
@@ -60,22 +49,10 @@ const Generator = () => {
           </div>
           
           <div className="space-y-8">
-            {!selectedTemplate && (
-              <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800/30">
-                <InfoIcon className="h-5 w-5 text-yellow-600" />
-                <AlertTitle>Drawing Template Required</AlertTitle>
-                <AlertDescription>
-                  Please select a drawing template in the Templates tab to generate drawings.
-                </AlertDescription>
-              </Alert>
-            )}
-            
             <div className="grid grid-cols-1 gap-6">
               <ParametricForm 
                 parameters={parameters} 
                 onParametersChange={handleParameterChange} 
-                selectedTemplate={selectedTemplate}
-                onTemplateSelect={handleTemplateSelect}
               />
             </div>
             
@@ -90,7 +67,6 @@ const Generator = () => {
             <div className="grid grid-cols-1 gap-6">
               <DrawingPreview 
                 parameters={parameters} 
-                templateId={selectedTemplate || "template-endmill"} 
               />
             </div>
           </div>
